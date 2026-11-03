@@ -1,4 +1,5 @@
 /* 一天的節奏：時刻軸／距離軸切換、日夜時段、騎車小人播放動畫。 */
+import { loadTrack, distAt } from './track.js';
 import { INCIDENT_TYPES, esc, fmtDur, fmtKm, ordinal, stayOf, toMin } from './ride.js';
 
 export const RIDE_COLORS = ['#0E7C5A', '#2563EB', '#EA580C', '#7C3AED', '#DB2777', '#0891B2', '#CA8A04', '#4B5563'];
@@ -27,8 +28,10 @@ function periodAt(sun, m) {
 }
 const hhmm = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(Math.round(m % 60)).padStart(2, '0')}`;
 
-/* 某個時刻（分鐘）人在哪：km 與狀態 */
-export function positionAt(ride, a, m) {
+/* 某個時刻（分鐘）人在哪：km、狀態、當下速度。
+   有 GPS 軌跡（trk）時，區段內的位置照軌跡實際前進的距離走（等紅燈、爬坡會變慢），並在兩端對齊休息站的里程；
+   沒有軌跡就以區段平均速度等速前進。 */
+export function positionAt(ride, a, m, trk) {
   const st = ride.stops;
   if (a.start == null || m <= a.start) return { km: 0, state: 'wait', idx: 0, f: 0 };
   for (let i = 0; i < st.length - 1; i += 1) {
@@ -37,8 +40,17 @@ export function positionAt(ride, a, m) {
     if (i > 0 && arr != null && dep != null && m >= arr && m < dep) return { km: s.km, state: 'rest', idx: i, f: 0, place: s.place };
     const t0 = toMin(s.depart ?? s.arrive); const t1 = toMin(n.arrive ?? n.depart);
     if (t0 != null && t1 != null && m >= t0 && m < t1) {
-      const f = (m - t0) / (t1 - t0 || 1);
-      return { km: s.km + (n.km - s.km) * f, state: 'ride', idx: i, f };
+      let f = (m - t0) / (t1 - t0 || 1);
+      const segKm = n.km - s.km; let kmh = (t1 > t0) ? segKm / ((t1 - t0) / 60) : null;
+      if (trk) {
+        const d0 = distAt(trk, t0); const d1 = distAt(trk, t1);
+        if (d1 - d0 > 100) {
+          f = Math.min(1, Math.max(0, (distAt(trk, m) - d0) / (d1 - d0)));
+          const w = 1.5; // 前後 1.5 分鐘的平均速度
+          kmh = Math.max(0, ((distAt(trk, Math.min(t1, m + w)) - distAt(trk, Math.max(t0, m - w))) / (d1 - d0)) * segKm / ((Math.min(t1, m + w) - Math.max(t0, m - w)) / 60));
+        }
+      }
+      return { km: s.km + segKm * f, state: 'ride', idx: i, f, kmh };
     }
   }
   return { km: a.km ?? 0, state: 'done', idx: st.length - 1, f: 0 };
@@ -52,7 +64,7 @@ function splitByPeriod(sun, t0, t1) {
   return out;
 }
 
-const W = 1200; const L = 92; const R = 96; const ROW = 40; const TOP = 30; const BH = 14;
+const W = 1200; const L = 92; const R = 150; const ROW = 40; const TOP = 30; const BH = 14;
 
 function buildSvg(items, mode) {
   const starts = items.map(({ a }) => a.start).filter((v) => v != null);
@@ -135,6 +147,8 @@ export function mountRhythm(el, items, { onTick } = {}) {
   let mode = 'km'; const picked = new Set(items.map(({ ride }) => ride.no)); let geo; let playing = null; let raf = 0; let elapsed = 0; let speed = 1; let last = 0;
   const maxTotal = Math.max(...items.map(({ a }) => a.total || 0));
   const SECONDS = 24; // 1x 時，最長的一次播放 24 秒
+  const trk = {};
+  items.forEach(({ ride }) => loadTrack(ride.date).then((t) => { trk[ride.no] = t; }));
 
   el.innerHTML = `<div class="strip">
     <div class="strip__bar">
@@ -186,13 +200,13 @@ export function mountRhythm(el, items, { onTick } = {}) {
       row.classList.toggle('is-dim', !!playing && !on);
       if (!on) { g.style.display = 'none'; out.textContent = mode === 'time' ? fmtDur(a.total) : `${fmtKm(a.km)} km`; return; }
       const m = a.start + Math.min(elapsed, a.total);
-      const p = positionAt(ride, a, m);
+      const p = positionAt(ride, a, m, trk[ride.no]);
       const y = TOP + items.findIndex((r) => r.ride.no === ride.no) * ROW + 16;
       const x = mode === 'time' ? geo.xT(m) : geo.xK(p.km);
       g.style.display = '';
       g.setAttribute('transform', `translate(${x},${y - 1})`);
       g.classList.toggle('is-rest', p.state === 'rest');
-      out.textContent = p.state === 'done' ? `🏁 ${fmtDur(a.total)}` : `${fmtKm(p.km)} km${p.state === 'rest' ? ' ☕' : ''}`;
+      out.textContent = p.state === 'done' ? `🏁 ${fmtDur(a.total)}` : p.state === 'rest' ? `${fmtKm(p.km)} km ☕` : `${fmtKm(p.km)} km · ${p.kmh != null ? Math.round(p.kmh) : '–'} km/h`;
       pos.push({ ride, a, ...p, clock: m });
     });
     el.querySelector('[data-clock]').textContent = playing ? `出發後 ${fmtDur(elapsed)}` : '';
