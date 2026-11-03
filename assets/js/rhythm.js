@@ -120,7 +120,7 @@ function buildSvg(items, mode) {
     return `<g class="row" data-row="${ride.no}">
       ${bg}
       <a href="#/ride/${ride.no}"><text class="lbl" x="22" y="${y + 12}">${ordinal(ride.no)} <tspan class="tot">${ride.date.slice(0, 4)}</tspan></text></a>
-      <g class="play1" data-play="${ride.no}" role="button" tabindex="0" aria-label="播放 ${ordinal(ride.no)}"><title>只播放 ${ordinal(ride.no)}</title><circle cx="8" cy="${y + 7}" r="8"/><path d="M5 ${y + 2.5} L12 ${y + 7} L5 ${y + 11.5}Z"/></g>
+      <g class="play1" data-play="${ride.no}" role="button" tabindex="0" aria-label="播放 ${ordinal(ride.no)}"><title>只播放 ${ordinal(ride.no)}／暫停</title><circle cx="8" cy="${y + 7}" r="8"/><path class="ic-play" d="M5 ${y + 2.5} L12 ${y + 7} L5 ${y + 11.5}Z"/><path class="ic-pause" d="M4.5 ${y + 3}h2.5v8h-2.5zM9 ${y + 3}h2.5v8h-2.5z"/></g>
       ${bars}
       <text class="tot" data-readout="${ride.no}" x="${endX + 8}" y="${y + 12}">${mode === 'time' ? fmtDur(a.total) : `${fmtKm(a.km)} km`}</text>
       <g class="rider" data-rider="${ride.no}" style="display:none"><text class="rider__icon" transform="scale(-1,1)" x="0" y="0" text-anchor="middle">🚴</text></g>
@@ -165,7 +165,8 @@ export function mountRhythm(el, items, { onTick } = {}) {
   function draw() {
     geo = buildSvg(items, mode); svgBox.innerHTML = geo.svg; legend();
     svgBox.querySelectorAll('[data-play]').forEach((b) => {
-      const go = () => start([Number(b.dataset.play)]);
+      // 這一趟正在播：按了就暫停／繼續；否則只播放這一趟
+      const go = () => { const n = Number(b.dataset.play); if (playing && playing.includes(n) && !finished) togglePause(); else start([n]); };
       b.addEventListener('click', go); b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
     });
     if (playing) paint();
@@ -173,6 +174,11 @@ export function mountRhythm(el, items, { onTick } = {}) {
 
   function paint() {
     const pos = [];
+    svgBox.querySelectorAll('[data-play]').forEach((b) => {
+      const on = !!playing && playing.includes(Number(b.dataset.play)) && !paused && !finished;
+      b.classList.toggle('is-playing', on);
+      b.setAttribute('aria-label', `${on ? '暫停' : '播放'} ${ordinal(Number(b.dataset.play))}`);
+    });
     items.forEach(({ ride, a }) => {
       const g = svgBox.querySelector(`[data-rider="${ride.no}"]`); const out = svgBox.querySelector(`[data-readout="${ride.no}"]`);
       const row = svgBox.querySelector(`[data-row="${ride.no}"]`);
@@ -200,11 +206,11 @@ export function mountRhythm(el, items, { onTick } = {}) {
     if (elapsed >= lim) { elapsed = lim; paint(); finish(); return; }
     paint(); raf = requestAnimationFrame(frame);
   }
-  let paused = false;
+  let paused = false; let finished = false;
   const pauseBtn = el.querySelector('[data-pause]');
-  const setPaused = (v) => { paused = v; pauseBtn.textContent = v ? '▶ 繼續' : '❚❚ 暫停'; pauseBtn.setAttribute('aria-pressed', String(v)); };
+  const setPaused = (v) => { paused = v; pauseBtn.textContent = v ? '▶ 繼續' : '❚❚ 暫停'; pauseBtn.setAttribute('aria-pressed', String(v)); if (playing) paint(); };
   function start(nos) {
-    cancelAnimationFrame(raf); playing = nos; elapsed = 0; last = 0;
+    cancelAnimationFrame(raf); playing = nos; elapsed = 0; last = 0; finished = false;
     el.querySelector('[data-stop]').hidden = false; pauseBtn.hidden = false; setPaused(false);
     raf = requestAnimationFrame(frame);
   }
@@ -212,9 +218,9 @@ export function mountRhythm(el, items, { onTick } = {}) {
     if (!playing) return;
     if (paused) { setPaused(false); last = 0; raf = requestAnimationFrame(frame); } else { setPaused(true); cancelAnimationFrame(raf); }
   }
-  function finish() { cancelAnimationFrame(raf); pauseBtn.hidden = true; el.querySelector('[data-stop]').textContent = '✕ 清除'; }
+  function finish() { cancelAnimationFrame(raf); finished = true; paint(); pauseBtn.hidden = true; el.querySelector('[data-stop]').textContent = '✕ 清除'; }
   function stop() {
-    cancelAnimationFrame(raf); playing = null; elapsed = 0; setPaused(false); pauseBtn.hidden = true;
+    cancelAnimationFrame(raf); playing = null; elapsed = 0; finished = false; setPaused(false); pauseBtn.hidden = true;
     const b = el.querySelector('[data-stop]'); b.hidden = true; b.textContent = '■ 停止';
     paint();
   }

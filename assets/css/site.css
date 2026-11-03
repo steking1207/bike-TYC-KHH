@@ -73,6 +73,10 @@ h2 { font-size: 18px; margin: 32px 0 12px; }
 .strip .play1:hover circle, .strip .play1:focus circle { fill: var(--accent); }
 .strip .play1:hover path, .strip .play1:focus path { fill: #fff; }
 .strip .play1:focus { outline: none; }
+.strip .play1 .ic-pause, .strip .play1.is-playing .ic-play { display: none; }
+.strip .play1.is-playing .ic-pause { display: inline; }
+.strip .play1.is-playing circle { fill: var(--accent); }
+.strip .play1.is-playing path { fill: #fff; }
 .strip .row { transition: opacity .2s; }
 .strip .row.is-dim { opacity: .3; }
 .strip .rider__icon { font-size: 22px; }
