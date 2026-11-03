@@ -1,0 +1,645 @@
+{
+  "title": "一日桃高",
+  "subtitle": "桃園 → 高雄，一天騎完",
+  "places": [
+    {
+      "id": "home",
+      "name": "家",
+      "private": true
+    },
+    {
+      "id": "yamei",
+      "name": "亞美豆漿大王",
+      "map": "https://maps.app.goo.gl/4DPUvpYHnGZn1pvz5",
+      "lat": 24.9647,
+      "lon": 121.21702
+    },
+    {
+      "id": "nanliao",
+      "name": "新竹南寮",
+      "sub": "7-11聖華門市",
+      "map": "https://maps.app.goo.gl/cGGpX5NpEqNo3gfg8",
+      "lat": 24.84163,
+      "lon": 120.9332
+    },
+    {
+      "id": "tongxiao",
+      "name": "苗栗通霄",
+      "sub": "7-11通館門市",
+      "map": "https://maps.app.goo.gl/upazpeZg2rLZKByJ7",
+      "lat": 24.48791,
+      "lon": 120.67829
+    },
+    {
+      "id": "wuqi",
+      "name": "台中梧棲",
+      "sub": "7-11大聖門市",
+      "map": "https://maps.app.goo.gl/hdf2ige2WxmXGft67",
+      "lat": 24.24025,
+      "lon": 120.5185
+    },
+    {
+      "id": "lukang",
+      "name": "彰化鹿港",
+      "sub": "鹿港天后宮",
+      "map": "https://maps.app.goo.gl/AzN5mqv5TXAU2RYb6",
+      "lat": 24.06001,
+      "lon": 120.43212
+    },
+    {
+      "id": "fangyuan",
+      "name": "彰化芳苑",
+      "sub": "7-11芳林門市(改新芳林)",
+      "map": "https://maps.app.goo.gl/VYgccNBb8ghmHTxo8",
+      "lat": 23.92632,
+      "lon": 120.32258
+    },
+    {
+      "id": "mailiao",
+      "name": "雲林麥寮",
+      "sub": "7-11富登門市",
+      "map": "https://maps.app.goo.gl/QLHGQX5wNgq5fXcx9",
+      "lat": 23.79667,
+      "lon": 120.27563
+    },
+    {
+      "id": "kouhu",
+      "name": "雲林口湖",
+      "sub": "全家口湖下崙店",
+      "map": "https://maps.app.goo.gl/G4oPC8sUmBaHfsVL8",
+      "lat": 23.61957,
+      "lon": 120.16544
+    },
+    {
+      "id": "budai",
+      "name": "嘉義布袋",
+      "sub": "全家布袋上海店",
+      "map": "https://maps.app.goo.gl/MEo3kR9HSC1Aj5ZcA",
+      "lat": 23.38011,
+      "lon": 120.16051
+    },
+    {
+      "id": "qigu",
+      "name": "台南七股",
+      "closed": true,
+      "sub": "萊爾富七股台潭店",
+      "map": "https://maps.app.goo.gl/emLQ91NS4FQMDzHAA",
+      "lat": 23.18848,
+      "lon": 120.133
+    },
+    {
+      "id": "tainan-north",
+      "name": "台南北區",
+      "sub": "旗哥牛肉湯",
+      "map": "https://maps.app.goo.gl/PQkTTNiCvePH3iaQ6",
+      "lat": 23.01091,
+      "lon": 120.185
+    },
+    {
+      "id": "luzhu",
+      "name": "高雄路竹",
+      "sub": "7-11竹滬門市",
+      "map": "https://maps.app.goo.gl/pXkL6CZpFBfiXGaHA",
+      "lat": 22.86096,
+      "lon": 120.22758
+    },
+    {
+      "id": "ziguan",
+      "name": "高雄梓官",
+      "sub": "7-11梓官門市",
+      "map": "https://maps.app.goo.gl/kUbcXXfkXhv64Wan6",
+      "lat": 22.7599,
+      "lon": 120.26256
+    },
+    {
+      "id": "zuoying",
+      "name": "高鐵左營站",
+      "map": "https://maps.app.goo.gl/JeXqbZFi2wUhUjK16",
+      "lat": 22.68739,
+      "lon": 120.30644
+    }
+  ],
+  "rides": [
+    {
+      "no": 1,
+      "date": "2020-12-19",
+      "riders": [
+        "SK2",
+        "秀彥",
+        "Terry"
+      ],
+      "weather": "苗栗以北雨、中部後晴",
+      "temp": 17.8,
+      "links": {
+        "strava": "https://www.strava.com/activities/4490206683"
+      },
+      "stops": [
+        {
+          "place": "home",
+          "depart": "03:44",
+          "km": 0
+        },
+        {
+          "place": "yamei",
+          "arrive": "03:59",
+          "depart": "04:13",
+          "km": 4.7,
+          "tag": "早餐"
+        },
+        {
+          "place": "tongxiao",
+          "arrive": "07:22",
+          "depart": "08:00",
+          "km": 94.9,
+          "note": "雨停"
+        },
+        {
+          "place": "wuqi",
+          "arrive": "09:04",
+          "depart": "09:41",
+          "km": 128.5
+        },
+        {
+          "place": "lukang",
+          "arrive": "10:30",
+          "depart": "10:37",
+          "km": 152
+        },
+        {
+          "place": "mailiao",
+          "arrive": "11:52",
+          "depart": "12:36",
+          "km": 187.9,
+          "tag": "中餐"
+        },
+        {
+          "place": "budai",
+          "arrive": "14:20",
+          "depart": "14:51",
+          "km": 243.2
+        },
+        {
+          "place": "tainan-north",
+          "arrive": "16:21",
+          "depart": "16:58",
+          "km": 289.1,
+          "tag": "晚餐"
+        },
+        {
+          "place": "zuoying",
+          "arrive": "18:57",
+          "km": 333.6
+        }
+      ],
+      "incidents": []
+    },
+    {
+      "no": 2,
+      "date": "2021-12-11",
+      "riders": [
+        "SK2",
+        "秀彥",
+        "Terry",
+        "效哲"
+      ],
+      "weather": "整日晴",
+      "temp": 20,
+      "links": {
+        "strava": "https://www.strava.com/activities/6369941043"
+      },
+      "train": "21:30",
+      "stops": [
+        {
+          "place": "home",
+          "depart": "03:41",
+          "km": 0
+        },
+        {
+          "place": "yamei",
+          "arrive": "03:54",
+          "depart": "04:31",
+          "km": 4.7,
+          "tag": "早餐"
+        },
+        {
+          "place": "tongxiao",
+          "arrive": "07:46",
+          "depart": "08:36",
+          "km": 96.4
+        },
+        {
+          "place": "wuqi",
+          "arrive": "10:24",
+          "depart": "10:36",
+          "km": 131.8
+        },
+        {
+          "place": "lukang",
+          "arrive": "11:35",
+          "depart": "12:20",
+          "km": 155.3,
+          "tag": "中餐"
+        },
+        {
+          "place": "kouhu",
+          "arrive": "14:36",
+          "depart": "15:20",
+          "km": 216.1
+        },
+        {
+          "place": "tainan-north",
+          "arrive": "17:49",
+          "depart": "18:27",
+          "km": 291.7,
+          "tag": "晚餐"
+        },
+        {
+          "place": "zuoying",
+          "arrive": "20:14",
+          "km": 336.8
+        }
+      ],
+      "incidents": [
+        {
+          "type": "flat",
+          "km": 100.5,
+          "who": "Terry",
+          "minutes": 29
+        },
+        {
+          "type": "leave",
+          "km": 216.1,
+          "who": "效哲"
+        }
+      ]
+    },
+    {
+      "no": 3,
+      "date": "2023-01-01",
+      "riders": [
+        "SK2",
+        "秀彥",
+        "Terry"
+      ],
+      "weather": "苗栗以北地濕、中部晴、台南過後大雨",
+      "temp": 16.6,
+      "links": {
+        "strava": "https://www.strava.com/activities/8320254054",
+        "gear": "https://lighterpack.com/r/qafdjz"
+      },
+      "train": "21:30",
+      "stops": [
+        {
+          "place": "home",
+          "depart": "03:44",
+          "km": 0
+        },
+        {
+          "place": "yamei",
+          "arrive": "03:57",
+          "depart": "04:18",
+          "km": 4.7,
+          "tag": "早餐"
+        },
+        {
+          "place": "tongxiao",
+          "arrive": "07:52",
+          "depart": "08:31",
+          "km": 105.9
+        },
+        {
+          "place": "wuqi",
+          "arrive": "09:59",
+          "depart": "10:26",
+          "km": 142.1
+        },
+        {
+          "place": "fangyuan",
+          "arrive": "12:03",
+          "depart": "12:37",
+          "km": 188,
+          "tag": "中餐"
+        },
+        {
+          "place": "kouhu",
+          "arrive": "14:28",
+          "depart": "14:48",
+          "km": 228.7
+        },
+        {
+          "place": "budai",
+          "arrive": "15:42",
+          "depart": "15:57",
+          "km": 258.6
+        },
+        {
+          "place": "tainan-north",
+          "arrive": "17:41",
+          "depart": "18:11",
+          "km": 304.5,
+          "tag": "晚餐"
+        },
+        {
+          "place": "luzhu",
+          "arrive": "19:06",
+          "depart": "19:16",
+          "km": 325.9
+        },
+        {
+          "place": "zuoying",
+          "arrive": "20:21",
+          "km": 348.9
+        }
+      ],
+      "incidents": [
+        {
+          "type": "flat",
+          "km": 188,
+          "who": "秀彥"
+        },
+        {
+          "type": "join",
+          "km": 304.5,
+          "who": "Terry",
+          "note": "台南會合"
+        }
+      ]
+    },
+    {
+      "no": 4,
+      "date": "2023-12-30",
+      "riders": [
+        "SK2",
+        "秀彥",
+        "Terry",
+        "效哲"
+      ],
+      "weather": "新竹以北小雨、中部晴、台南過後雨",
+      "temp": 18.2,
+      "links": {
+        "strava": "https://www.strava.com/activities/10461614592",
+        "gear": "https://lighterpack.com/r/2h8a7m"
+      },
+      "train": "21:30",
+      "stops": [
+        {
+          "place": "home",
+          "depart": "03:17",
+          "km": 0
+        },
+        {
+          "place": "yamei",
+          "arrive": "03:31",
+          "depart": "04:02",
+          "km": 4.6,
+          "tag": "早餐"
+        },
+        {
+          "place": "nanliao",
+          "arrive": "05:51",
+          "depart": "06:14",
+          "km": 43.5
+        },
+        {
+          "place": "tongxiao",
+          "arrive": "08:08",
+          "depart": "08:43",
+          "km": 94.4
+        },
+        {
+          "place": "wuqi",
+          "arrive": "09:59",
+          "depart": "10:26",
+          "km": 128.1
+        },
+        {
+          "place": "lukang",
+          "arrive": "11:21",
+          "depart": "11:59",
+          "km": 151.6,
+          "tag": "中餐"
+        },
+        {
+          "place": "kouhu",
+          "arrive": "14:18",
+          "depart": "14:52",
+          "km": 212.3
+        },
+        {
+          "place": "qigu",
+          "arrive": "16:57",
+          "depart": "17:24",
+          "km": 265.9,
+          "tag": "晚餐"
+        },
+        {
+          "place": "luzhu",
+          "arrive": "19:23",
+          "depart": "19:43",
+          "km": 309.4
+        },
+        {
+          "place": "zuoying",
+          "arrive": "20:46",
+          "km": 332.4
+        }
+      ],
+      "incidents": [
+        {
+          "type": "leave",
+          "km": 212.3,
+          "who": "效哲"
+        }
+      ]
+    },
+    {
+      "no": 5,
+      "date": "2024-12-29",
+      "riders": [
+        "SK2",
+        "秀彥",
+        "Terry"
+      ],
+      "weather": "整日晴",
+      "temp": 15.3,
+      "links": {
+        "strava": "https://www.strava.com/activities/13214677087",
+        "gear": "https://lighterpack.com/r/ng3hy7"
+      },
+      "train": "21:05",
+      "stops": [
+        {
+          "place": "home",
+          "depart": "02:45",
+          "km": 0
+        },
+        {
+          "place": "yamei",
+          "arrive": "03:00",
+          "depart": "03:20",
+          "km": 4.8,
+          "tag": "早餐"
+        },
+        {
+          "place": "nanliao",
+          "arrive": "04:36",
+          "depart": "04:55",
+          "km": 43.4
+        },
+        {
+          "place": "tongxiao",
+          "arrive": "06:38",
+          "depart": "07:15",
+          "km": 93.9
+        },
+        {
+          "place": "wuqi",
+          "arrive": "08:24",
+          "depart": "08:40",
+          "km": 127.8
+        },
+        {
+          "place": "lukang",
+          "arrive": "09:27",
+          "depart": "10:13",
+          "km": 151.2,
+          "tag": "中餐"
+        },
+        {
+          "place": "kouhu",
+          "arrive": "12:34",
+          "depart": "13:17",
+          "km": 212
+        },
+        {
+          "place": "budai",
+          "arrive": "14:17",
+          "depart": "14:44",
+          "km": 241.6
+        },
+        {
+          "place": "tainan-north",
+          "arrive": "16:18",
+          "depart": "16:56",
+          "km": 287.5,
+          "tag": "晚餐"
+        },
+        {
+          "place": "ziguan",
+          "arrive": "18:23",
+          "depart": "18:31",
+          "km": 321.1
+        },
+        {
+          "place": "zuoying",
+          "arrive": "19:16",
+          "km": 332.4
+        }
+      ],
+      "incidents": []
+    },
+    {
+      "no": 6,
+      "date": "2026-01-10",
+      "riders": [
+        "SK2",
+        "秀彥",
+        "Terry"
+      ],
+      "weather": "整日晴",
+      "temp": 14.4,
+      "links": {
+        "strava": "https://www.strava.com/activities/17006909835",
+        "gear": "https://lighterpack.com/r/ng3hy7"
+      },
+      "train": "21:30",
+      "stops": [
+        {
+          "place": "home",
+          "depart": "02:48",
+          "km": 0
+        },
+        {
+          "place": "yamei",
+          "arrive": "03:00",
+          "depart": "03:23",
+          "km": 4.7,
+          "tag": "早餐"
+        },
+        {
+          "place": "nanliao",
+          "arrive": "04:48",
+          "depart": "05:07",
+          "km": 43.3
+        },
+        {
+          "place": "tongxiao",
+          "arrive": "07:08",
+          "depart": "07:32",
+          "km": 93.9
+        },
+        {
+          "place": "wuqi",
+          "arrive": "08:42",
+          "depart": "08:59",
+          "km": 127.6
+        },
+        {
+          "place": "lukang",
+          "arrive": "11:01",
+          "depart": "11:36",
+          "km": 153.1,
+          "tag": "中餐"
+        },
+        {
+          "place": "fangyuan",
+          "arrive": "12:21",
+          "depart": "12:30",
+          "km": 173.1
+        },
+        {
+          "place": "kouhu",
+          "arrive": "13:55",
+          "depart": "14:25",
+          "km": 214.3
+        },
+        {
+          "place": "budai",
+          "arrive": "15:22",
+          "depart": "15:40",
+          "km": 243.9
+        },
+        {
+          "place": "tainan-north",
+          "arrive": "17:25",
+          "depart": "17:57",
+          "km": 289.8,
+          "tag": "晚餐"
+        },
+        {
+          "place": "luzhu",
+          "arrive": "18:51",
+          "depart": "19:03",
+          "km": 311.2
+        },
+        {
+          "place": "zuoying",
+          "arrive": "20:13",
+          "km": 334.1
+        }
+      ],
+      "incidents": [
+        {
+          "type": "crash",
+          "km": 77.7
+        },
+        {
+          "type": "flat",
+          "km": 139,
+          "minutes": 72,
+          "who": "SK2"
+        }
+      ]
+    }
+  ]
+}

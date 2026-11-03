@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>紀錄管理 — 一日桃高</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B6E4F'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle'%3E%F0%9F%9A%B4%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <div class="login" data-login hidden>
+    <form class="login__card" data-login-form>
+      <a class="brand" href="../">🚴 一日桃高 <span>紀錄管理</span></a>
+      <h1>登入後台</h1>
+      <p class="hint">只有對這個 GitHub repo 有寫入權限的人能進入。請貼上你的 GitHub 權杖。</p>
+      <label class="field"><span>GitHub 權杖</span><input class="input" name="token" type="password" autocomplete="current-password" placeholder="github_pat_…" required></label>
+      <label class="check"><input type="checkbox" name="remember"> 記住這台電腦（公用電腦請勿勾選）</label>
+      <p class="login__error" data-login-error role="alert" hidden></p>
+      <button type="submit" class="btn btn--primary btn--block">進入後台</button>
+      <details class="login__more"><summary>Repo 設定</summary>
+        <div class="row3"><input class="input" name="owner" aria-label="帳號" required><input class="input" name="repo" aria-label="Repo" required><input class="input" name="branch" aria-label="分支" required></div>
+      </details>
+      <div class="login__new">
+        <p class="login__new-title">還沒有權杖？三步完成</p>
+        <ol>
+          <li>按下方按鈕，到 GitHub 建立權杖（名稱、權限已幫你填好）</li>
+          <li>Repository access 選 <b>Only select repositories</b> → 勾 <code data-repo-name>bike-TYC-KHH</code>，按 <b>Generate token</b></li>
+          <li>複製產生的 <code>github_pat_…</code>，貼到上方欄位</li>
+        </ol>
+        <a class="btn btn--block" data-token-link href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">在 GitHub 建立權杖 ↗</a>
+      </div>
+    </form>
+  </div>
+
+  <div data-app hidden>
+    <header class="top">
+      <a class="brand" href="../" target="_blank" rel="noopener">🚴 一日桃高 <span>紀錄管理</span></a>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" aria-selected="true" data-tab="rides">活動</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="places">地點與網站</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="help">使用說明</button>
+      </div>
+      <div class="top__actions">
+        <span class="dirty" data-dirty hidden>有未發佈的變更</span>
+        <button type="button" class="btn" data-preview>預覽</button>
+        <button type="button" class="btn" data-download>下載 JSON</button>
+        <button type="button" class="btn btn--primary" data-publish>發佈到 GitHub</button>
+        <button type="button" class="btn" data-logout>登出</button>
+      </div>
+    </header>
+
+    <main class="layout" data-panel="rides">
+      <aside class="side">
+        <button type="button" class="btn btn--primary btn--block" data-add>＋ 新增一次活動</button>
+        <label class="btn btn--block gpx-btn">📂 從 GPX 匯入<input type="file" accept=".gpx,application/gpx+xml" data-gpx hidden></label>
+        <p class="hint gpx-hint">Strava 活動頁 → ⋯ → 匯出 GPX，再選這個檔案。也可以直接把檔案拖進來。</p>
+        <ul class="list" data-list></ul>
+      </aside>
+      <section class="editor" data-editor></section>
+    </main>
+
+    <main class="layout layout--single" data-panel="places" hidden>
+      <section class="editor" data-places></section>
+    </main>
+
+    <main class="layout layout--single" data-panel="help" hidden>
+      <section class="editor prose">
+        <h2>新增一次活動</h2>
+        <ol>
+          <li><b>最快的方式</b>：在 Strava 活動頁按 ⋯ →「匯出 GPX」，回到後台按「從 GPX 匯入」選這個檔案（或直接拖進來）。會自動抓出日期、出發與抵達時間、每次停留的時間與里程，並猜是哪個休息點，確認後再微調即可。</li>
+          <li>或按「＋ 新增一次活動」手動填。會自動帶入下一個場次編號、今天日期、上一次的參加者和停靠點（時間與里程留空）。</li>
+          <li>依 Strava 紀錄逐站填<b>到達</b>、<b>出發</b>時間與<b>累計里程</b>。起點只填出發，終點只填到達。</li>
+          <li>這次沒停的站按 ✕ 刪掉；多停的站按「＋ 插入」，或先到「地點與網站」新增地點。</li>
+          <li>停留時間、區段距離、均速、總時間、休息時間都會自動計算，不用自己算。</li>
+          <li>爆胎、摔車、會合、中離等狀況加在「突發狀況」，填發生時的里程。在休息點發生的，就填那一站的里程。</li>
+          <li>右上角「預覽」先看效果，沒問題再按「發佈到 GitHub」，GitHub Pages 約 1 分鐘後更新。</li>
+        </ol>
+        <h2>地點</h2>
+        <p>地點清單的順序就是路線順序（北到南），比較表的列依此排列。新地點請插在正確的位置。已被活動使用的地點不能刪除，店家關了請勾「已歇業」。</p>
+        <h2>權杖</h2>
+        <ol>
+          <li>開啟 <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub → Fine-grained personal access token</a>。</li>
+          <li>Repository access 選 <b>Only select repositories</b>，選 <code>bike-TYC-KHH</code>。</li>
+          <li>Repository permissions → <b>Contents</b> 設成 <b>Read and write</b>。</li>
+        </ol>
+        <p>權杖只存在你的瀏覽器（沒勾「記住這台電腦」時關掉瀏覽器就清除），只會送到 api.github.com。</p>
+        <h2>沒有權杖也可以</h2>
+        <p>按「下載 JSON」，把檔案覆蓋到 repo 的 <code>data/rides.json</code> 再 commit。</p>
+      </section>
+    </main>
+  </div>
+
+  <dialog class="dialog" data-gpx-dialog>
+    <form method="dialog" class="dialog__body" data-gpx-form></form>
+  </dialog>
+
+  <div class="toast" data-toast role="status" aria-live="polite" hidden></div>
+  <script type="module" src="admin.js"></script>
+</body>
+</html>
