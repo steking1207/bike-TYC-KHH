@@ -1,6 +1,7 @@
 /* 路線地圖：Leaflet（cdnjs）+ OpenStreetMap 底圖（濾鏡調淺）。有 data/tracks/<日期>.json 就畫實際軌跡，沒有就連休息站直線。 */
 import { esc, ordinal } from './ride.js';
 import { rideColor } from './rhythm.js';
+import { loadTrack, trackAt } from './track.js';
 
 const LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/';
 let loading;
@@ -15,21 +16,6 @@ function loadLeaflet() {
     });
   }
   return loading;
-}
-
-const tracks = {};
-function loadTrack(date) {
-  if (!tracks[date]) tracks[date] = fetch(`data/tracks/${date}.json`).then((r) => (r.ok ? r.json() : null)).then((j) => (j && Array.isArray(j.pts) && j.pts.length > 1 ? j.pts : null)).catch(() => null);
-  return tracks[date];
-}
-/* 軌跡上某個時刻（當地分鐘）的位置 */
-function trackAt(pts, m) {
-  if (m <= pts[0][2]) return [pts[0][0], pts[0][1]];
-  let lo = 0; let hi = pts.length - 1;
-  if (m >= pts[hi][2]) return [pts[hi][0], pts[hi][1]];
-  while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (pts[mid][2] <= m) lo = mid; else hi = mid; }
-  const a = pts[lo]; const b = pts[hi]; const f = (m - a[2]) / (b[2] - a[2] || 1);
-  return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
 }
 
 const ll = (p) => (p && Number.isFinite(p.lat) && Number.isFinite(p.lon) ? [p.lat, p.lon] : null);
@@ -56,7 +42,7 @@ export function mountMap(el, items, placesById) {
 
     const lines = {}; const bounds = [];
     items.forEach(({ ride }) => {
-      const pts = trackOf[ride.no] ? trackOf[ride.no].map((p) => [p[0], p[1]]) : ride.stops.map((s) => ll(placesById[s.place])).filter(Boolean);
+      const pts = trackOf[ride.no] ? trackOf[ride.no].pts.map((p) => [p[0], p[1]]) : ride.stops.map((s) => ll(placesById[s.place])).filter(Boolean);
       if (pts.length < 2) return;
       bounds.push(...pts);
       lines[ride.no] = L.polyline(pts, { color: rideColor(ride.no), weight: 4, opacity: items.length > 1 ? 0.55 : 0.85 })

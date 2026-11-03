@@ -25,9 +25,29 @@ const incLabel = (x) => {
 const placeLink = (p) => (p.map ? `<a class="pin" href="${esc(p.map)}" target="_blank" rel="noopener" title="Google 地圖">📍</a>` : '');
 const timeOf = (s) => (s.arrive && s.depart ? `${s.arrive} → ${s.depart}` : s.arrive || s.depart || '');
 
-function rhythmAndMap(items) {
+function rhythmAndMap(items, extraTick) {
   const map = mountMap($('[data-mapbox]', view), items, PLACES);
-  mountRhythm($('[data-rhythm]', view), items, { onTick: (pos) => map.update(pos) });
+  mountRhythm($('[data-rhythm]', view), items, { onTick: (pos) => { map.update(pos); if (extraTick) extraTick(pos); } });
+}
+
+/* 單次頁面：播放時，左側「沿途」標出目前所在的休息站或區段，並捲動到看得到的位置 */
+function followList(pos) {
+  const list = $('.tl', view); if (!list) return;
+  const p = pos && pos[0];
+  let key = null;
+  if (p) key = p.state === 'ride' ? `seg-${p.idx}` : p.state === 'wait' ? 'stop-0' : `stop-${p.idx}`;
+  list.querySelectorAll('.is-now').forEach((el) => { if (el.dataset.key !== key) el.classList.remove('is-now'); });
+  list.querySelectorAll('[data-live]').forEach((el) => { if (el.closest('[data-key]').dataset.key !== key) el.hidden = true; });
+  if (!key) return;
+  const cur = list.querySelector(`[data-key="${key}"]`); if (!cur) return;
+  if (!cur.classList.contains('is-now')) {
+    cur.classList.add('is-now');
+    const r = cur.getBoundingClientRect();
+    const strip = $('.ride-rhythm', view); const topEdge = strip && getComputedStyle(strip).position === 'sticky' ? strip.getBoundingClientRect().bottom : 60;
+    if (r.top < topEdge || r.bottom > innerHeight) scrollBy({ top: r.top - (topEdge + innerHeight) / 2 + r.height / 2, behavior: 'smooth' });
+  }
+  const live = cur.querySelector('[data-live]');
+  if (live) { live.hidden = false; live.textContent = `🚴 ${fmtKm(p.km)} km · ${p.kmh != null ? Math.round(p.kmh) : '–'} km/h`; }
 }
 
 /* ---------- views ---------- */
@@ -76,7 +96,7 @@ function rideView(no) {
     if (k > 0 && k < stops.length - 1) info.push(`停留 ${stayOf(s)} 分`);
     info.push(`📍 ${fmtKm(s.km)} K`);
     if (k === stops.length - 1 && ride.train) info.push(`🚄 高鐵 ${esc(ride.train)}`);
-    items.push(`<li class="tl-stop ${end ? 'is-end' : ''}"><div class="tl-card">
+    items.push(`<li class="tl-stop ${end ? 'is-end' : ''}" data-key="stop-${k}"><div class="tl-card">
       <div class="tl-card__row"><span class="tl-card__name">${esc(p.name)} ${placeLink(p)}</span>${p.sub ? `<span class="tl-card__sub">${esc(p.sub)}${p.closed ? '（已歇業）' : ''}</span>` : ''}<span class="tl-card__time">${timeOf(s)}</span></div>
       <div class="tl-card__info">${s.tag ? `<span class="badge">${esc(s.tag)}</span>` : ''}${info.map((t) => `<span>${t}</span>`).join('')}${s.note ? `<span>💬 ${esc(s.note)}</span>` : ''}</div>
       ${a.stopIncidents[k].map((x) => `<div class="tl-inc">${incLabel(x)}</div>`).join('')}
@@ -84,7 +104,7 @@ function rideView(no) {
     const seg = a.segments[k];
     if (seg) {
       const slow = seg.speed != null && seg.speed < 18;
-      items.push(`<li class="tl-seg"><span class="${slow ? 'slow' : ''}">${fmtKm(seg.km)} km · ${fmtDur(seg.min)} · ${seg.speed ? seg.speed.toFixed(1) : '–'} km/h</span>${seg.incidents.map((x) => `<div class="tl-inc">${incLabel(x)}</div>`).join('')}</li>`);
+      items.push(`<li class="tl-seg" data-key="seg-${k}"><span class="${slow ? 'slow' : ''}">${fmtKm(seg.km)} km · ${fmtDur(seg.min)} · ${seg.speed ? seg.speed.toFixed(1) : '–'} km/h</span><span class="tl-live" data-live hidden></span>${seg.incidents.map((x) => `<div class="tl-inc">${incLabel(x)}</div>`).join('')}</li>`);
     }
   });
   const prev = RIDES[i + 1]; const next = RIDES[i - 1];
@@ -100,12 +120,12 @@ function rideView(no) {
       <div class="stat"><b>${fmtKm(a.km)}</b><span>公里</span></div>
       <div class="stat"><b>${a.avg ? a.avg.toFixed(1) : '–'}</b><span>km/h 平均</span></div>
     </div>
-    <div data-rhythm></div>
+    <div class="ride-rhythm" data-rhythm></div>
     <div class="ride-cols"><div><h2>沿途</h2>
     <ol class="tl">${items.join('')}</ol></div>
     <div class="ride-cols__map"><h2>地圖</h2><div data-mapbox></div></div></div>
     <div class="pager">${prev ? `<a class="btn" href="#/ride/${prev.ride.no}">← ${ordinal(prev.ride.no)}</a>` : '<span></span>'}${next ? `<a class="btn" href="#/ride/${next.ride.no}">${ordinal(next.ride.no)} →</a>` : ''}</div>`;
-  rhythmAndMap([RIDES[i]]);
+  rhythmAndMap([RIDES[i]], followList);
 }
 
 let selected = null;
