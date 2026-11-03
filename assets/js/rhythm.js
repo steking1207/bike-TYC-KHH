@@ -57,14 +57,14 @@ export function positionAt(ride, a, m, trk) {
 }
 
 /* 把 [t0,t1] 依時段切開 */
-function splitByPeriod(sun, t0, t1) {
+export function splitByPeriod(sun, t0, t1) {
   const cuts = [sun.dawn, sun.sunrise, sun.sunset, sun.dusk].filter((c) => c > t0 && c < t1);
   const pts = [t0, ...cuts, t1]; const out = [];
   for (let i = 0; i < pts.length - 1; i += 1) out.push({ t0: pts[i], t1: pts[i + 1], p: periodAt(sun, (pts[i] + pts[i + 1]) / 2) });
   return out;
 }
 
-const W = 1200; const L = 92; const R = 150; const ROW = 40; const TOP = 30; const BH = 14;
+const W = 1200; const L = 104; const R = 150; const ROW = 46; const TOP = 34; const BH = 12;
 
 function buildSvg(items, mode) {
   const starts = items.map(({ a }) => a.start).filter((v) => v != null);
@@ -130,11 +130,12 @@ function buildSvg(items, mode) {
     }
     const endX = mode === 'time' ? xT(a.end) : xK(a.km || 0);
     return `<g class="row" data-row="${ride.no}">
+      <rect class="row__hit" x="0" y="${y - 15}" width="${W}" height="${ROW - 2}" rx="10"/>
       ${bg}
-      <a href="#/ride/${ride.no}"><text class="lbl" x="22" y="${y + 12}">${ordinal(ride.no)} <tspan class="tot">${ride.date.slice(0, 4)}</tspan></text></a>
-      <g class="play1" data-play="${ride.no}" role="button" tabindex="0" aria-label="播放 ${ordinal(ride.no)}"><title>只播放 ${ordinal(ride.no)}／暫停</title><circle cx="8" cy="${y + 7}" r="8"/><path class="ic-play" d="M5 ${y + 2.5} L12 ${y + 7} L5 ${y + 11.5}Z"/><path class="ic-pause" d="M4.5 ${y + 3}h2.5v8h-2.5zM9 ${y + 3}h2.5v8h-2.5z"/></g>
+      <a href="#/ride/${ride.no}"><text class="lbl" x="28" y="${y + 11}">${ordinal(ride.no)} <tspan class="tot" dx="2">${ride.date.slice(0, 4)}</tspan></text></a>
+      <g class="play1" data-play="${ride.no}" role="button" tabindex="0" aria-label="播放 ${ordinal(ride.no)}"><title>只播放 ${ordinal(ride.no)}／暫停</title><circle cx="11" cy="${y + 6}" r="11"/><path class="ic-play" d="M8 ${y + 1} L15.5 ${y + 6} L8 ${y + 11}Z"/><path class="ic-pause" d="M6.5 ${y + 1.5}h3v9h-3zM12.5 ${y + 1.5}h3v9h-3z"/></g>
       ${bars}
-      <text class="tot" data-readout="${ride.no}" x="${endX + 8}" y="${y + 12}">${mode === 'time' ? fmtDur(a.total) : `${fmtKm(a.km)} km`}</text>
+      <text class="tot" data-readout="${ride.no}" x="${endX + 10}" y="${y + 11}">${mode === 'time' ? fmtDur(a.total) : `${fmtKm(a.km)} km`}</text>
       <g class="rider" data-rider="${ride.no}" style="display:none"><text class="rider__icon" transform="scale(-1,1)" x="0" y="0" text-anchor="middle">🚴</text></g>
     </g>`;
   }).join('');
@@ -152,8 +153,8 @@ export function mountRhythm(el, items, { onTick } = {}) {
 
   el.innerHTML = `<div class="strip">
     <div class="strip__bar">
-      <div class="axis-toggle" role="group" aria-label="橫軸">
-        <button type="button" data-mode="km" aria-pressed="true">距離</button><button type="button" data-mode="time" aria-pressed="false">時刻</button>
+      <div class="segctl" role="group" aria-label="橫軸"><span class="segctl__ink" aria-hidden="true"></span>
+        <button type="button" data-mode="km" aria-pressed="true">依距離</button><button type="button" data-mode="time" aria-pressed="false">依時刻</button>
       </div>
       <div class="strip__play">
         <button type="button" class="btn btn--sm btn--go" data-playall>${items.length > 1 ? '▶ 播放比較' : '▶ 播放'}</button>
@@ -163,7 +164,7 @@ export function mountRhythm(el, items, { onTick } = {}) {
         <span class="clock num" data-clock></span>
       </div>
     </div>
-    ${items.length > 1 ? `<div class="picks" role="group" aria-label="選擇要比較的場次"><span class="picks__label">比較：</span>${items.map(({ ride }) => `<button type="button" class="key" data-pick="${ride.no}" aria-pressed="true"><i style="background:${rideColor(ride.no)}"></i>${ordinal(ride.no)} ${ride.date.slice(0, 4)}</button>`).join('')}<button type="button" class="linkish" data-pick-all>全選</button><button type="button" class="linkish" data-pick-none>清除</button></div>` : ''}
+    ${items.length > 1 ? `<div class="picks" role="group" aria-label="選擇要比較的場次"><span class="picks__label">播放哪幾趟</span>${items.map(({ ride }) => `<button type="button" class="key" data-pick="${ride.no}" aria-pressed="true"><i style="background:${rideColor(ride.no)}"></i>${ordinal(ride.no)} ${ride.date.slice(0, 4)}</button>`).join('')}<button type="button" class="linkish" data-pick-all>全選</button><button type="button" class="linkish" data-pick-none>清除</button></div>` : ''}
     <div class="strip__svg" data-svg></div>
     <div class="legend" data-legend></div>
   </div>`;
@@ -174,7 +175,7 @@ export function mountRhythm(el, items, { onTick } = {}) {
     const inc = Object.values(INCIDENT_TYPES).slice(0, 5).map((t) => `<span>${t.icon} ${t.label}</span>`).join('');
     el.querySelector('[data-legend]').innerHTML = mode === 'time'
       ? `${periodKeys}<span><i style="background:var(--stop)"></i>休息</span>${inc}`
-      : `${periodKeys}<span><i class="dot"></i>休息站（越大停越久）</span>${inc}`;
+      : `${periodKeys}<span><i class="dot"></i>休息站（圓越大停越久）</span>${inc}`;
   }
   function draw() {
     geo = buildSvg(items, mode); svgBox.innerHTML = geo.svg; legend();
@@ -239,9 +240,13 @@ export function mountRhythm(el, items, { onTick } = {}) {
     paint();
   }
 
+  const segInk = () => { const on = el.querySelector('[data-mode][aria-pressed="true"]'); const ink = el.querySelector('.segctl__ink'); if (on && ink) { ink.style.width = `${on.offsetWidth}px`; ink.style.transform = `translateX(${on.offsetLeft}px)`; } };
   el.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => {
-    mode = b.dataset.mode; el.querySelectorAll('[data-mode]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); draw();
+    if (mode === b.dataset.mode) return;
+    mode = b.dataset.mode; el.querySelectorAll('[data-mode]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); segInk(); draw();
+    svgBox.animate([{ opacity: 0.2 }, { opacity: 1 }], { duration: 380, easing: 'cubic-bezier(.2,.7,.1,1)' });
   }));
+  requestAnimationFrame(segInk); if (document.fonts) document.fonts.ready.then(segInk);
   const playBtn = el.querySelector('[data-playall]');
   const syncPicks = () => {
     el.querySelectorAll('[data-pick]').forEach((b) => b.setAttribute('aria-pressed', String(picked.has(Number(b.dataset.pick)))));

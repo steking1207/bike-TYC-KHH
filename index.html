@@ -2,23 +2,38 @@
 <html lang="zh-Hant-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>一日桃高</title>
   <meta name="description" content="桃園騎到高雄，一天完成。每一次的休息點、時間與突發狀況紀錄。">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B6E4F'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle'%3E%F0%9F%9A%B4%3C/text%3E%3C/svg%3E">
+  <meta name="theme-color" content="#F4F2EC">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2316203A'/%3E%3Cpath d='M22 14c14 6 4 18 12 26s6 10 8 10' fill='none' stroke='%23F4B731' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='22' cy='14' r='5' fill='%23F4F2EC'/%3E%3Ccircle cx='42' cy='50' r='5' fill='%23EE6A3A'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;900&display=swap">
   <link rel="stylesheet" href="assets/css/site.css">
 </head>
 <body>
-  <header class="top">
-    <a class="brand" href="#/">🚴 <b data-title>一日桃高</b></a>
-    <nav class="nav">
+  <a class="skip" href="#main">跳到內容</a>
+  <header class="top" data-top>
+    <a class="brand" href="#/" aria-label="一日桃高 首頁">
+      <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M11 6c8 3 1 10 6 14s3 6 4 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><circle cx="11" cy="6" r="3"/><circle cx="21" cy="26" r="3" class="brand__end"/></svg>
+      <span class="brand__name" data-title>一日桃高</span>
+      <span class="brand__code">TYC → KHH</span>
+    </a>
+    <nav class="nav" aria-label="主要">
+      <span class="nav__ink" data-nav-ink aria-hidden="true"></span>
       <a href="#/" data-nav="home">總覽</a>
       <a href="#/compare" data-nav="compare">比較表</a>
     </nav>
   </header>
   <div class="preview-bar" data-preview-bar hidden>預覽模式：顯示後台尚未發佈的資料</div>
-  <main class="wrap" data-view><p class="muted">載入中…</p></main>
-  <footer class="foot muted">資料：<code>data/rides.json</code></footer>
+  <main id="main" class="view" data-view tabindex="-1"><div class="loading" aria-live="polite"><span></span>載入中</div></main>
+  <footer class="foot">
+    <div class="foot__in">
+      <p class="foot__big">天還沒亮出發，<br>天黑以後抵達。</p>
+      <p class="foot__meta">資料：<code>data/rides.json</code><span>·</span>軌跡已移除出發點 200 m 內的位置</p>
+    </div>
+  </footer>
   <script type="module" src="assets/js/app.js"></script>
 </body>
 </html>
