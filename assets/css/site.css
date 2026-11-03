@@ -366,10 +366,8 @@ table.cmp { border-collapse: separate; border-spacing: 0; font-size: 14px; min-w
 /* ───────── footer ───────── */
 .foot { margin-top: clamp(80px, 10vw, 140px); background: var(--ink); color: #E9EAF0; position: relative; overflow: hidden; }
 .foot::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: linear-gradient(90deg, var(--km-night), var(--km-twilight) 22%, var(--km-day) 50%, var(--km-twilight) 78%, var(--km-night)); }
-.foot__in { max-width: var(--max); margin: 0 auto; padding: clamp(48px, 6vw, 88px) var(--gutter) 32px; }
+.foot__in { max-width: var(--max); margin: 0 auto; padding: clamp(48px, 6vw, 88px) var(--gutter); }
 .foot__big { margin: 0; font: 900 clamp(32px, 5vw, 68px)/1.2 var(--serif); color: #fff; letter-spacing: .01em; }
-.foot__meta { margin: clamp(32px, 4vw, 56px) 0 0; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.14); font-size: 13px; color: #A9AEC0; display: flex; flex-wrap: wrap; gap: 6px 12px; }
-.foot__meta code { background: rgba(255,255,255,.08); color: #E9EAF0; }
 
 /* ───────── responsive ───────── */
 @media (max-width: 1100px) {
