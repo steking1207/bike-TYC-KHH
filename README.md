@@ -10,6 +10,12 @@
 - **單次** `#/ride/6`：停靠點時間軸，區段之間標出爆胎、摔車等突發狀況
 - **比較表** `#/compare`：可勾選場次的「地點 × 場次」對照表，可列印
 
+### 地圖的天氣圖層
+
+地圖右上角可切換「💨 風／🌧️ 雨／關」：風是風速底色加上流動的風場線條，雨是每小時雨量。左下角的時間軸可拖動看當天各時刻；按「播放」時天氣跟著騎士的時間變化，並顯示騎士所在位置的風向、風速、順風／逆風、雨量與氣溫。總覽頁可選要看哪一天。
+
+資料來自 [Open-Meteo](https://open-meteo.com/) 的歷史天氣（ERA5／ECMWF 再分析，約 25 km 格點、逐時），是模式重建的數值，不是測站實測，小範圍的陣雨可能不準。新增紀錄並發佈後，GitHub Actions（`.github/workflows/weather.yml`）會自動抓那天的資料存到 `data/weather/<日期>.json`；剛騎完的日期資料可能要幾天後才齊，每週一會自動補抓。也可在本機執行 `python3 tools/fetch_weather.py`。
+
 ## 新增一次活動（後台）
 
 打開 `/admin/`（例如 `https://steking1207.github.io/bike-TYC-KHH/admin/`）。
@@ -79,8 +85,10 @@ assets/css/site.css   樣式
 assets/js/app.js      畫面產生
 assets/js/ride.js     計算與驗證（前台、後台共用）
 assets/js/gpx.js      GPX 解析與停留偵測（後台用）
+assets/js/weather.js  地圖的風場、降雨圖層
 data/rides.json       所有紀錄
 data/tracks/          每次的簡化軌跡（[緯度, 經度, 當天第幾分鐘]），沒有的場次地圖改畫休息站直線
+data/weather/         每次當天的逐時天氣格點（風、雨、氣溫），由 tools/fetch_weather.py 產生
 admin/                後台
 ```
 
