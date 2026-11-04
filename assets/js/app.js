@@ -175,7 +175,7 @@ function dayBand() {
     const st = sunTimes(ride.date);
     a.segments.forEach((s) => { const t0 = toMin(s.from.depart ?? s.from.arrive); const t1 = toMin(s.to.arrive ?? s.to.depart); if (t0 == null || t1 == null) return; splitByPeriod(st, t0, t1).forEach((p) => { ridden += p.t1 - p.t0; if (p.p !== 'day') dark += p.t1 - p.t0; }); });
   });
-  const sky = `linear-gradient(90deg, #D3D7EA 0 ${pct(sun.dawn)}, #F7CDB2 ${pct(sun.sunrise)}, #FBE6B4 calc(${pct(sun.sunrise)} + 3%) calc(${pct(sun.sunset)} - 3%), #F7CDB2 ${pct(sun.sunset)}, #D3D7EA ${pct(sun.dusk)} 100%)`;
+  const sky = `linear-gradient(90deg, #D6DBF7 0 ${pct(sun.dawn)}, #FFD3B8 ${pct(sun.sunrise)}, #FFEAA8 calc(${pct(sun.sunrise)} + 3%) calc(${pct(sun.sunset)} - 3%), #FFD3B8 ${pct(sun.sunset)}, #D6DBF7 ${pct(sun.dusk)} 100%)`;
   return `<div class="dayband" data-reveal>
     <div class="dayband__copy"><h3>從天黑騎到天黑</h3>
       <p>平均 <b>${hhmm(s0)}</b> 出發、<b>${hhmm(e0)}</b> 抵達。騎車的時間裡有 <b>${Math.round((dark / ridden) * 100)}%</b> 在日出前或日落後。</p></div>
@@ -342,7 +342,7 @@ function compare(again) {
   body += `<tr class="sum"><th class="loc">總計</th>${cols.map(({ a }) => `<td>⏱ ${fmtDur(a.total)}<br>☕ ${fmtDur(a.rest)}<br>${fmtKm(a.km)} km</td>`).join('')}</tr>`;
   const scrollKeep = again ? $('.table-wrap', view)?.scrollLeft : 0;
   view.innerHTML = `
-    <header class="page-head"><div><p class="eyebrow rv">Stop by stop</p><h1 class="rv" style="--d:.06s">比較表</h1>
+    <header class="page-head"><div><p class="eyebrow rv">Stop by stop</p><h1 class="rv" style="--d:.06s"><span class="skew">比較表</span></h1>
       <p class="rv" style="--d:.12s">每一站的到達與出發時間並排對照。灰色列是兩站之間的距離、時間與均速；沒停的站會併在區段裡。</p></div></header>
     <div class="toggles rv" style="--d:.18s" role="group" aria-label="要比較的場次">${RIDES.map(({ ride }) => `<button class="key" type="button" data-no="${ride.no}" aria-pressed="${selected.has(ride.no)}"><i style="background:${rideColor(ride.no)}"></i>${ordinal(ride.no)} ${ride.date.slice(0, 4)}</button>`).join('')}
       <span class="toggles__sp"></span><button class="btn btn--sm" type="button" data-print>列印</button></div>
