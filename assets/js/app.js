@@ -2,7 +2,7 @@ import { INCIDENT_TYPES, esc, analyze, indexPlaces, fmtDur, fmtKm, ordinal, stay
 import { mountRhythm, rideColor, sunTimes, splitByPeriod } from './rhythm.js';
 import { mountMap } from './map.js';
 import { loadTrack } from './track.js';
-import { mountRideArt } from './rideart.js';
+import { mountAeroBackdrop } from './aeroui.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('[data-view]');
@@ -153,13 +153,11 @@ function heroRoute(fig, item) {
       const lab = labels.map((l, i) => `<g class="route__stop${l.end ? ' is-end' : ''}${l.last ? ' is-last' : ''}" style="--d:${(0.3 + (i / labels.length) * 2.6).toFixed(2)}s">
         <circle cx="${l.x.toFixed(1)}" cy="${l.y.toFixed(1)}" r="${l.end ? 5.5 : 3.5}"/>
         ${l.show !== false ? `<text x="${(l.first ? l.x + 6 : l.x - 14).toFixed(1)}" y="${(l.first ? l.y - 16 : l.y + 4.5).toFixed(1)}" text-anchor="end">${esc(l.name)}${l.end ? `<tspan class="route__t" dx="8">${l.t || ''}</tspan>` : ''}</text>` : ''}</g>`).join('');
-      const keep = fig.querySelector('[data-photos]');
       fig.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${ordinal(ride.no)} 的實際路線：桃園到高雄">
         <text class="route__north" x="${W - 8}" y="16" text-anchor="end">N ↑</text>
         <path class="route__glow" d="${d}"/><path class="route__line" d="${d}"/>${lab}
         <circle class="route__halo" r="8" cx="${endXY[0]}" cy="${endXY[1]}" ${animate ? 'style="opacity:0"' : ''}/><circle class="route__dot" r="5" cx="${startXY[0]}" cy="${startXY[1]}"/>
       </svg><figcaption>${ordinal(ride.no)} · ${dot(ride.date)}<br>${fmtKm(a.km)} km 實際軌跡</figcaption>`;
-      if (keep) fig.prepend(keep);
       const line = fig.querySelector('.route__line'); const len = line.getTotalLength();
       fig.querySelectorAll('.route__line, .route__glow').forEach((el) => { el.style.strokeDasharray = `${len}`; el.style.setProperty('--len', `${len}`); });
       const dotEl = fig.querySelector('.route__dot'); const halo = fig.querySelector('.route__halo');
@@ -180,22 +178,6 @@ function heroRoute(fig, item) {
     const ro = new ResizeObserver(() => { if (!fig.isConnected) { ro.disconnect(); return; } if (fig.clientWidth === w) return; w = fig.clientWidth; clearTimeout(tm); tm = setTimeout(() => { fig.classList.remove('is-drawing'); draw(false); }, 120); });
     ro.observe(fig);
   });
-}
-
-/* hero 照片三聯：桌機鋪在右半邊斜切，窄螢幕改放在路線圖後面 */
-const NARROW = matchMedia('(max-width: 960px)');
-function heroPhotos() {
-  const box = $('[data-photos]', view); if (!box) return;
-  const place = () => {
-    const target = NARROW.matches ? $('[data-route]', view) : $('.hero', view); if (!target) return;
-    if (box.parentElement !== target) target.prepend(box);
-    const r = $('[data-route]', view);
-    box.style.height = NARROW.matches || !r ? '' : `${r.offsetTop + r.offsetHeight + 96 + 28}px`;
-  };
-  place(); NARROW.onchange = () => { if (box.isConnected) place(); };
-  if ('ResizeObserver' in window) new ResizeObserver(() => { if (box.isConnected) place(); }).observe($('.hero', view));
-  box.querySelectorAll('img').forEach((img) => { const on = () => img.classList.add('is-on'); if (img.complete) on(); else img.addEventListener('load', on, { once: true }); });
-  requestAnimationFrame(() => box.classList.add('is-in'));
 }
 
 /* 從天黑到天黑：每一趟在一天 24 小時裡的位置 */
@@ -236,8 +218,7 @@ function home() {
   const yrs = n ? `${RIDES[n - 1].ride.date.slice(0, 4)}–${RIDES[0].ride.date.slice(0, 4)}` : '';
   const heroItem = RIDES[0];
   view.innerHTML = `
-    <section class="hero hero--photo">
-      <div class="hero__photos" data-photos aria-hidden="true">${['night', 'day', 'dusk'].map((k) => `<span><img src="assets/img/hero/${k}.webp" alt="" decoding="async"></span>`).join('')}</div>
+    <section class="hero">
       <div class="hero__text">
         <p class="eyebrow rv">Taoyuan <i></i> Kaohsiung<span>·</span>${yrs}</p>
         <h1 class="hero__title rv" style="--d:.08s"><span>一日</span><span class="hl">桃高</span></h1>
@@ -249,7 +230,6 @@ function home() {
         </dl>
       </div>
       <figure class="route" data-route></figure>
-      <div class="ride-art" data-ride-art></div>
       ${dayBand()}
     </section>
 
@@ -279,8 +259,6 @@ function home() {
   }).join('')}</ol>
     </section>`;
   if (heroItem) heroRoute($('[data-route]', view), heroItem);
-  heroPhotos();
-  mountRideArt($('[data-ride-art]', view));
   rhythmAndMap(RIDES);
   countUp();
 }
@@ -431,6 +409,8 @@ function route() {
 addEventListener('scroll', () => { $('[data-top]').classList.toggle('is-scrolled', scrollY > 8); }, { passive: true });
 addEventListener('resize', navInk);
 if (document.fonts) document.fonts.ready.then(navInk);
+
+mountAeroBackdrop();
 
 load().then((d) => {
   DATA = d; PLACES = indexPlaces(d);
