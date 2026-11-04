@@ -115,7 +115,7 @@ code { font-family: var(--mono); font-size: max(13px, .9em); background: var(--p
 @keyframes underline { from { transform: scaleX(0); } }
 .hero__lede { margin: clamp(22px, 3vw, 36px) 0 0; font-size: clamp(16px, 1.5vw, 19px); line-height: 1.75; color: var(--ink-2); max-width: 30em; }
 .hero__lede b { color: var(--ink); font-weight: 700; }
-.hero__stats { margin: clamp(32px, 4vw, 56px) 0 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--ink); }
+.hero__stats { margin: clamp(32px, 4vw, 56px) 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--ink); }
 .hero__stats div { padding: 16px 16px 0 0; }
 .hero__stats div + div { padding-left: 16px; border-left: 1px solid var(--line); }
 .hero__stats dt { font-size: 13px; color: var(--muted); order: 2; }
@@ -200,6 +200,17 @@ code { font-family: var(--mono); font-size: max(13px, .9em); background: var(--p
 .strip .play1.is-playing path { fill: #fff; }
 .strip .row { transition: opacity .3s; }
 .strip .row.is-dim { opacity: .25; }
+/* 每列前面的勾選框：勾了才會被「播放」一起比較 */
+.strip .pick1 { cursor: pointer; }
+.strip .pick1 rect { fill: var(--panel); stroke: var(--line-strong); stroke-width: 1.5; transition: fill .15s, stroke .15s; }
+.strip .pick1 path { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+.strip .pick1.is-on rect { fill: var(--ink); stroke: var(--ink); }
+.strip .pick1.is-on path { opacity: 1; }
+.strip .pick1:hover rect, .strip .pick1:focus-visible rect { stroke: var(--accent); }
+.strip .pick1:focus { outline: none; }
+.picks-hint { margin: 2px 0 10px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+.picks-hint b { color: var(--ink); }
+.picks-hint .linkish { margin-left: 6px; padding: 2px 4px; }
 .strip .row__hit { fill: transparent; }
 .strip .row:hover .row__hit { fill: rgba(11,15,26,.035); }
 .strip .rider__icon { font-size: 22px; }
@@ -217,6 +228,8 @@ code { font-family: var(--mono); font-size: max(13px, .9em); background: var(--p
 .map__canvas { height: 600px; border-radius: 16px; overflow: hidden; background: #EBEBE7; display: grid; place-items: center; }
 .map__canvas.leaflet-container { display: block; font: 13px/1.4 var(--sans); background: #EBEBE7; }
 .map__msg { margin: 0; }
+.map__play { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px 4px 12px; }
+.map__play-note { font-size: 13px; color: var(--muted); }
 .map__keys { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 8px 6px; }
 .map__note { font-size: 13px; margin: 4px 8px 6px; }
 .map-rider { position: relative; }
@@ -391,7 +404,7 @@ table.cmp { border-collapse: separate; border-spacing: 0; font-size: 14px; min-w
   .nav a { padding: 7px 13px; }
   .hero__title { font-size: 31vw; line-height: 1; }
   .hero__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .hero__stats div:nth-child(3) { padding-left: 0; border-left: 0; }
+  .hero__stats div:nth-child(3) { padding-left: 0; border-left: 0; grid-column: 1 / -1; }
   .hero__stats div:nth-child(n+3) { border-top: 1px solid var(--line); margin-top: 12px; }
   .route { height: 460px; }
   .sec__head { grid-template-columns: minmax(0, 1fr); }
@@ -474,4 +487,15 @@ table.cmp { border-collapse: separate; border-spacing: 0; font-size: 14px; min-w
   .wx__panel { left: 8px; bottom: 46px; width: calc(100% - 16px); padding: 8px 12px; gap: 4px; }
   .wx__clock { font-size: 17px; }
   .wx__layers button { padding: 8px 10px; }
+}
+
+/* 手機單次頁：播放時畫面底部的目前位置列（不自動捲動，地圖可以好好看） */
+.nowbar { display: none; }
+@media (max-width: 960px) {
+  .nowbar { position: fixed; left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 900; display: flex; align-items: center; gap: 6px; padding: 6px; border-radius: 16px; background: var(--ink); color: #fff; box-shadow: 0 14px 34px -12px rgba(11,15,26,.55); }
+  .nowbar__txt { flex: 1; min-width: 0; display: grid; text-align: left; border: 0; background: none; color: inherit; font: 13px/1.35 var(--sans); padding: 4px 8px; cursor: pointer; }
+  .nowbar__txt b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nowbar__txt span { color: rgba(255,255,255,.75); font-variant-numeric: tabular-nums; }
+  .nowbar__btn { flex: none; width: 44px; height: 44px; border-radius: 12px; border: 0; background: var(--accent); color: #fff; font: 700 15px/1 var(--sans); cursor: pointer; }
+  .nowbar__btn--ghost { background: rgba(255,255,255,.12); }
 }
