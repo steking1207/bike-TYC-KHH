@@ -471,7 +471,7 @@ table.cmp { border-collapse: separate; border-spacing: 0; font-size: 14px; min-w
 .wx.is-empty .wx__legend, .wx.is-empty .wx__time, .wx.is-off .wx__legend { display: none; }
 @media (max-width: 640px) {
   .wx__bar { top: 10px; right: 10px; }
-  .wx__panel { left: 8px; bottom: 26px; width: calc(100% - 16px); padding: 8px 12px; gap: 4px; }
+  .wx__panel { left: 8px; bottom: 46px; width: calc(100% - 16px); padding: 8px 12px; gap: 4px; }
   .wx__clock { font-size: 17px; }
   .wx__layers button { padding: 8px 10px; }
 }
