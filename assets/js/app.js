@@ -410,11 +410,10 @@ addEventListener('scroll', () => { $('[data-top]').classList.toggle('is-scrolled
 addEventListener('resize', navInk);
 if (document.fonts) document.fonts.ready.then(navInk);
 
-mountAeroBackdrop();
-
 load().then((d) => {
+  mountAeroBackdrop(d.aero);
   DATA = d; PLACES = indexPlaces(d);
   RIDES = [...(d.rides || [])].filter((r) => !r.hidden).sort((x, y) => y.no - x.no).map((ride) => ({ ride, a: analyze(ride, PLACES) }));
   $('[data-title]').textContent = d.title || '一日桃高';
   addEventListener('hashchange', route); route();
-}).catch((err) => { view.innerHTML = `<section class="page-head"><div><h1>載入失敗</h1><p>${esc(err.message)}</p><p class="muted">在本機預覽要先啟動伺服器，例如在資料夾執行 <code>python3 -m http.server</code>。</p></div></section>`; });
+}).catch((err) => { mountAeroBackdrop(); view.innerHTML = `<section class="page-head"><div><h1>載入失敗</h1><p>${esc(err.message)}</p><p class="muted">在本機預覽要先啟動伺服器，例如在資料夾執行 <code>python3 -m http.server</code>。</p></div></section>`; });

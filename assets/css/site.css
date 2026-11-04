@@ -589,3 +589,6 @@ html[data-sky="night"] .map__canvas { --ink: #0B0F1A; --ink-2: #2E3445; --muted:
 }
 @media (max-width: 960px) { body:has(.nowbar:not([hidden])) .aero-dock { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 70px); } }
 @media print { .aero, .aero-dock { display: none !important; } }
+.aero-panel__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.aero-panel__reset { border: 1px solid var(--line-strong); background: none; color: var(--ink-2); border-radius: 999px; padding: 6px 12px; font: 500 13px/1.2 var(--sans); cursor: pointer; }
+.aero-panel__reset:hover { border-color: var(--ink); color: var(--ink); }
