@@ -3,16 +3,22 @@
    在格點間做雙線性內插、小時之間做線性內插，所以播放時會連續變化。 */
 import { esc, ordinal } from './ride.js';
 import { trackAt } from './track.js';
+import { fetchWeatherDay } from './wxfetch.js';
 
 const cache = {};
+const unpack = (j) => {
+  if (!j || !Array.isArray(j.u) || !j.u.length) return null;
+  const s = j.scale || 10;
+  const f = (arr) => arr.map((h) => Float32Array.from(h, (x) => x / s));
+  return { ...j, u: f(j.u), v: f(j.v), rain: f(j.rain), temp: j.temp ? f(j.temp) : null };
+};
+/* 先讀 repo 裡存好的檔；沒有的話直接向 Open-Meteo 抓（後台下次發佈時會存起來） */
 export function loadWeather(date) {
   if (!cache[date]) {
-    cache[date] = fetch(`data/weather/${date}.json`).then((r) => (r.ok ? r.json() : null)).then((j) => {
-      if (!j || !Array.isArray(j.u) || !j.u.length) return null;
-      const s = j.scale || 10;
-      const f = (arr) => arr.map((h) => Float32Array.from(h, (x) => x / s));
-      return { ...j, u: f(j.u), v: f(j.v), rain: f(j.rain), temp: j.temp ? f(j.temp) : null };
-    }).catch(() => null);
+    cache[date] = fetch(`data/weather/${date}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      .then((j) => j || fetchWeatherDay(date))
+      .then(unpack)
+      .catch((err) => { delete cache[date]; return { error: err.message }; });
   }
   return cache[date];
 }
@@ -115,11 +121,13 @@ export function mountWeather(L, map, host, items, trackOf) {
     const [lo, hi] = rideSpan(no); range.min = lo; range.max = hi;
     if (!state.playing) setMinute(byNo[no].a.start ?? lo);
     const sel = ui.querySelector('[data-wx-day]'); if (sel) sel.value = String(no);
+    msg.hidden = false; msg.textContent = '天氣資料載入中…'; ui.classList.add('is-empty'); clearAll();
     loadWeather(byNo[no].ride.date).then((w) => {
       if (state.no !== no) return;
+      const err = w && w.error; if (err) w = null;
       state.W = w;
       msg.hidden = !!w; ui.classList.toggle('is-empty', !w);
-      if (!w) msg.textContent = `${byNo[no].ride.date} 的天氣資料還沒抓好，稍後再來看。`;
+      if (!w) msg.textContent = err ? `天氣資料載入失敗：${err}` : `${byNo[no].ride.date} 的天氣資料還沒出來（再分析資料約晚 5 天），過幾天再來看。`;
       refresh();
     });
   }
@@ -261,7 +269,7 @@ export function mountWeather(L, map, host, items, trackOf) {
   map.on('resize', () => { resize(); lastKey = ''; refresh(); seed(); kick(); });
   document.addEventListener('visibilitychange', kick);
 
-  map.attributionControl?.addAttribution('天氣 <a href="https://open-meteo.com/">Open-Meteo</a>（ERA5 再分析）');
+  map.attributionControl?.addAttribution('<a href="https://open-meteo.com/">Open-Meteo</a>');
   resize(); seed(); legend(); setDay(latest);
   requestAnimationFrame(kick);
   const t = setInterval(() => { if (!host.isConnected) { clearInterval(t); cancelAnimationFrame(raf); } else kick(); }, 1000);

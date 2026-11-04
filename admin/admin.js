@@ -1,6 +1,7 @@
 /* 一日桃高 紀錄管理 — 編輯 data/rides.json，直接用 GitHub API 發佈成一個 commit。
    全部在瀏覽器執行；權杖只會送到 api.github.com。登入方式沿用 SK2 作品集後台。 */
 import { parseGpx, analyzeTrack, guessPlace, kmHistory, hhmm, ymd, simplifyTrack } from '../assets/js/gpx.js';
+import { fetchWeatherDay } from '../assets/js/wxfetch.js';
 import { INCIDENT_TYPES, MEAL_TAGS, esc, analyze, indexPlaces, validateRide, fmtDur, fmtKm, ordinal, stayOf } from '../assets/js/ride.js';
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -133,6 +134,24 @@ async function publishTracks(summary) {
   return failed;
 }
 
+/* 每次騎乘當天的歷史天氣格點（地圖的風、雨圖層用）：repo 裡還沒有的日期，從 Open-Meteo 抓好存成 data/weather/<日期>.json。
+   剛騎完的日期資料要幾天後才齊，抓不到就先跳過，下次發佈會再試。失敗不影響發佈。 */
+async function publishWeather() {
+  const s = settings(); let have = new Set();
+  try { have = new Set((await gh(`/contents/data/weather?ref=${encodeURIComponent(s.branch)}&t=${Date.now()}`)).map((f) => f.name)); } catch (err) { if (err.status !== 404) return []; }
+  const saved = [];
+  for (const { date } of state.data.rides) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '') || have.has(`${date}.json`)) continue;
+    try {
+      const w = await fetchWeatherDay(date);
+      if (!w) continue;
+      await gh(`/contents/data/weather/${date}.json`, { method: 'PUT', body: JSON.stringify({ message: `存當日天氣：${date}`, content: b64FromText(`${JSON.stringify(w)}\n`), branch: s.branch }) });
+      saved.push(date);
+    } catch (err) { /* 下次再試 */ }
+  }
+  return saved;
+}
+
 async function publish() {
   if (!settings().token) { logout(); return; }
   const problems = allProblems();
@@ -151,6 +170,7 @@ async function publish() {
     }
     state.sha = res.content.sha; state.original = clone(state.data); setDirty(false); renderList();
     const failed = await publishTracks(summary);
+    btn.textContent = '存天氣資料…'; await publishWeather();
     toast(failed.length ? `已發佈（${summary}），但 ${failed.join('、')} 的軌跡沒存成功，請重新匯入 GPX 再發佈一次。` : `已發佈（${summary}）。GitHub Pages 約 1 分鐘後更新。`, failed.length ? 'error' : 'ok');
   } catch (err) {
     toast(`發佈失敗：${err.message}`, 'error');

@@ -5,7 +5,7 @@
     python3 tools/fetch_weather.py --force    # 全部重抓
     python3 tools/fetch_weather.py 2026-01-10 # 只抓指定日期
 
-只用 Python 標準函式庫。GitHub Actions（.github/workflows/weather.yml）會在 rides.json 更新時自動執行。
+只用 Python 標準函式庫。平常不用跑：後台發佈時會在瀏覽器抓好存檔（assets/js/wxfetch.js），前台沒有存檔時也會直接抓。
 
 輸出格式（數值都乘 10 存成整數以縮小檔案）：
   lat0/lon0 = 格點西南角，dlat/dlon = 間距，nlat/nlon = 列數/欄數，格點依「由南到北、每列由西到東」排列
@@ -28,10 +28,10 @@ OUT = ROOT / 'data' / 'weather'
 API = 'https://archive-api.open-meteo.com/v1/archive'
 
 # 涵蓋桃園到高雄、加上台灣海峽與中央山脈西側，地圖拉遠時周圍也有風場
-LAT0, LAT1, LON0, LON1, STEP = 21.5, 26.0, 118.5, 122.5, 0.25
+LAT0, LAT1, LON0, LON1, STEP = 21.75, 25.75, 118.5, 122.5, 0.25  # 和 assets/js/wxfetch.js 的 GRID 相同
 NLAT = round((LAT1 - LAT0) / STEP) + 1
 NLON = round((LON1 - LON0) / STEP) + 1
-CHUNK = 60  # 每次請求的格點數
+CHUNK = 100  # 每次請求的格點數
 
 
 def grid():
