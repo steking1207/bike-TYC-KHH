@@ -437,3 +437,41 @@ table.cmp { border-collapse: separate; border-spacing: 0; font-size: 14px; min-w
   body { background: #fff; }
   .rv { opacity: 1; transform: none; }
 }
+
+/* ───────── 天氣圖層（assets/js/weather.js） ───────── */
+.leaflet-weather-pane canvas, .wx-field, .wx-flow { position: absolute; left: 0; top: 0; pointer-events: none; }
+.wx-field { transition: opacity .25s; }
+.wx { position: absolute; inset: 0; z-index: 800; pointer-events: none; font: 13px/1.4 var(--sans); color: var(--ink); }
+.wx > * { pointer-events: auto; }
+.wx__bar { position: absolute; top: 12px; right: 12px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: calc(100% - 80px); }
+.wx__layers { display: inline-flex; background: rgba(255,255,255,.94); border-radius: 999px; box-shadow: var(--shadow); padding: 3px; }
+.wx__layers button { border: 0; background: transparent; font: 600 13px/1 var(--sans); color: var(--ink-2); padding: 8px 12px; border-radius: 999px; cursor: pointer; transition: background .2s, color .2s; }
+.wx__layers button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.wx__day { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.94); border-radius: 999px; box-shadow: var(--shadow); padding: 4px 6px 4px 14px; font-weight: 600; }
+.wx__day select { font: 500 13px/1.2 var(--sans); border: 1px solid var(--line-strong); border-radius: 999px; padding: 5px 8px; background: #fff; color: var(--ink); }
+.wx__panel { position: absolute; left: 12px; bottom: 30px; width: min(380px, calc(100% - 24px)); background: rgba(255,255,255,.94); border-radius: 16px; box-shadow: var(--shadow); padding: 10px 14px; display: grid; gap: 6px; }
+.wx__time { display: flex; align-items: center; gap: 12px; }
+.wx__clock { font: 800 20px/1 var(--sans); letter-spacing: -.01em; min-width: 3.2em; }
+.wx__time input { flex: 1; accent-color: var(--accent); min-width: 0; }
+.wx.is-live .wx__time input { opacity: .55; }
+.wx.is-live .wx__clock { color: var(--accent-ink); }
+.wx__here { margin: 0; color: var(--ink-2); }
+.wx__here:empty { display: none; }
+.wx__here em { font-style: normal; font-weight: 700; }
+.wx__here .is-head { color: var(--warn); }
+.wx__here .is-tail { color: var(--good); }
+.wx__legend { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 10px; }
+.wx__legend:empty { display: none; }
+.wx__unit { font-weight: 600; white-space: nowrap; }
+.wx__ramp { display: grid; gap: 2px; }
+.wx__ramp i { display: block; height: 8px; border-radius: 999px; }
+.wx__ramp span { display: flex; justify-content: space-between; color: var(--muted); font-variant-numeric: tabular-nums; }
+.wx__ramp b { font-weight: 500; min-width: 0; }
+.wx__msg { margin: 0; color: var(--muted); }
+.wx.is-empty .wx__legend, .wx.is-empty .wx__time, .wx.is-off .wx__legend { display: none; }
+@media (max-width: 640px) {
+  .wx__bar { top: 10px; right: 10px; }
+  .wx__panel { left: 8px; bottom: 46px; width: calc(100% - 16px); padding: 8px 12px; gap: 4px; }
+  .wx__clock { font-size: 17px; }
+  .wx__layers button { padding: 8px 10px; }
+}
