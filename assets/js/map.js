@@ -2,6 +2,7 @@
 import { esc, ordinal } from './ride.js';
 import { rideColor } from './rhythm.js';
 import { loadTrack, trackAt } from './track.js';
+import { mountWeather } from './weather.js';
 
 const LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/';
 let loading;
@@ -62,6 +63,9 @@ export function mountMap(el, items, placesById) {
     });
     if (bounds.length) map.fitBounds(bounds, { padding: [24, 24] }); else map.setView([23.9, 120.6], 8);
 
+    // 當日天氣圖層（風場、降雨），播放時跟著時間變化
+    const weather = mountWeather(L, map, map.getContainer(), items, trackOf);
+
     el.querySelectorAll('[data-key]').forEach((b) => b.addEventListener('click', () => {
       const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', String(on));
       const line = lines[b.dataset.key]; if (line) { if (on) line.addTo(map); else line.remove(); }
@@ -88,6 +92,7 @@ export function mountMap(el, items, placesById) {
         } else riders[ride.no].setLatLng(at);
       });
       Object.keys(riders).forEach((no) => { if (!live.has(Number(no))) { riders[no].remove(); delete riders[no]; } });
+      weather.update(positions, (no) => { const r = riders[no]; if (!r) return null; const p = r.getLatLng(); return [p.lat, p.lng]; });
     };
   }).catch((err) => { box.innerHTML = `<p class="muted map__msg">${esc(err.message)}</p>`; });
   return { update: (p) => api.update(p) };
