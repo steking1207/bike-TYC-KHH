@@ -2,6 +2,7 @@
    全部在瀏覽器執行；權杖只會送到 api.github.com。登入方式沿用 SK2 作品集後台。 */
 import { parseGpx, analyzeTrack, guessPlace, kmHistory, hhmm, ymd, simplifyTrack } from '../assets/js/gpx.js';
 import { fetchWeatherDay } from '../assets/js/wxfetch.js';
+import { AERO_DEFAULTS, AERO_OPTIONS } from '../assets/js/aeroui.js';
 import { INCIDENT_TYPES, MEAL_TAGS, esc, analyze, indexPlaces, validateRide, fmtDur, fmtKm, ordinal, stayOf } from '../assets/js/ride.js';
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -104,6 +105,7 @@ function summarize() {
   if (removed.length) parts.push(`刪除 ${removed.map(ordinal).join('、')}`);
   if (JSON.stringify(state.original.places) !== JSON.stringify(state.data.places)) parts.push('地點');
   if (state.original.title !== state.data.title || state.original.subtitle !== state.data.subtitle) parts.push('網站資訊');
+  if (JSON.stringify(state.original.aero || {}) !== JSON.stringify(state.data.aero || {})) parts.push('背景動畫預設');
   return parts.join('、') || '資料整理';
 }
 function allProblems() {
@@ -478,6 +480,7 @@ function renderPlaces() {
       <label class="field"><span>網站標題</span><input class="input" data-site="title" value="${esc(state.data.title || '')}"></label>
       <label class="field wide"><span>副標</span><input class="input" data-site="subtitle" value="${esc(state.data.subtitle || '')}"></label>
     </div>
+    ${aeroBox()}
     <h2>地點（依路線由北到南排列）</h2>
     <p class="hint">這個順序決定比較表的列順序。代號用小寫英文，建立後被活動用到就不能改。</p>
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th></th><th>代號</th><th>名稱</th><th>店名／補充</th><th>地圖</th><th></th><th>使用</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
@@ -488,6 +491,11 @@ function bindPlaces() {
   el.addEventListener('input', (e) => {
     const t = e.target;
     if (t.dataset.site) { state.data[t.dataset.site] = t.value; setDirty(); return; }
+    if (t.dataset.aero) {
+      const k = t.dataset.aero; const v = t.type === 'checkbox' ? t.checked : t.type === 'range' ? Number(t.value) : t.value;
+      const out = el.querySelector(`[data-aero-out="${k}"]`); if (out) out.textContent = k === 'speed' ? `${v} km/h` : `${Math.round(v * 100)}%`;
+      setAero(k, v); return;
+    }
     const tr = t.closest('[data-place]'); if (!tr) return;
     const p = state.data.places[+tr.dataset.place]; const k = t.dataset.p;
     if (k === 'closed') p.closed = t.checked || undefined;
@@ -508,6 +516,27 @@ function bindPlaces() {
     else return;
     setDirty(); renderPlaces();
   });
+}
+
+/* 背景騎乘動畫的網站預設值（存在 rides.json 的 aero；訪客自己在網站上改過的會優先） */
+function aeroBox() {
+  const a = { ...AERO_DEFAULTS, ...(state.data.aero || {}) };
+  const { STYLES, SCENES, TIMES } = AERO_OPTIONS;
+  const sel = (k, opts, label) => `<label class="field"><span>${label}</span><select class="input" data-aero="${k}">${Object.entries(opts).map(([v, n]) => `<option value="${v}" ${a[k] === v ? 'selected' : ''}>${esc(Array.isArray(n) ? `${n[0]}．${n[1]}` : n)}</option>`).join('')}</select></label>`;
+  return `<h2>背景騎乘動畫（網站預設）</h2>
+    <p class="hint">訪客第一次進站看到的樣子。訪客自己在網站右下角改過的設定會優先，按面板裡的「恢復網站預設」就會回到這裡的設定。</p>
+    <div class="box grid">
+      ${sel('style', STYLES, '畫風')}${sel('scene', SCENES, '場景')}${sel('time', TIMES, '日夜')}
+      <label class="field"><span>線條濃淡 <output data-aero-out="opacity">${Math.round(a.opacity * 100)}%</output></span><input type="range" min="0.15" max="1" step="0.05" value="${a.opacity}" data-aero="opacity"></label>
+      <label class="field"><span>騎乘節奏 <output data-aero-out="speed">${a.speed} km/h</output></span><input type="range" min="15" max="55" step="1" value="${a.speed}" data-aero="speed"></label>
+      <label class="check"><input type="checkbox" data-aero="on" ${a.on ? 'checked' : ''}> 預設顯示動畫</label>
+    </div>`;
+}
+function setAero(k, v) {
+  const a = { ...(state.data.aero || {}) }; a[k] = v;
+  Object.keys(a).forEach((x) => { if (a[x] === AERO_DEFAULTS[x]) delete a[x]; });
+  if (Object.keys(a).length) state.data.aero = a; else delete state.data.aero;
+  setDirty();
 }
 
 /* ---------------- misc ---------------- */

@@ -5,7 +5,7 @@
  */
 import { mountAero } from './aero.js';
 
-const KEY = 'tyckhh.aero.v5';
+const KEY = 'tyckhh.aero.user'; // 只存訪客自己改過的項目，其餘用後台設定的預設值
 const SEEN = 'tyckhh.aero.hint';
 const STYLES = { sculpted: ['A', '塊面'], hatched: ['B', '版畫'], blueprint: ['C', '藍圖'], ribbon: ['D', '流線'] };
 const SCENES = { hybrid: '山城混合', city: '城市', mountain: '山稜' };
@@ -23,18 +23,33 @@ const IC = {
   bike: '<circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5 9 9h6l3.5 7.5M9 9 12 16.5h-1M15 9l-1.5-3H16"/>',
 };
 const svg = (k) => `<svg viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>`;
-const DEF = { style: 'sculpted', scene: 'hybrid', time: 'day', speed: 30, opacity: 0.5, on: true };
+export const AERO_DEFAULTS = { style: 'sculpted', scene: 'hybrid', time: 'day', speed: 30, opacity: 0.5, on: true };
+export const AERO_OPTIONS = { STYLES, SCENES, TIMES };
+/* 後台存的預設值：不合法的欄位丟掉 */
+function siteDefaults(d = {}) {
+  const o = {};
+  if (STYLES[d.style]) o.style = d.style;
+  if (SCENES[d.scene]) o.scene = d.scene;
+  if (TIMES[d.time]) o.time = d.time;
+  if (Number.isFinite(d.speed)) o.speed = Math.min(55, Math.max(15, Math.round(d.speed)));
+  if (Number.isFinite(d.opacity)) o.opacity = Math.min(1, Math.max(0.15, Math.round(d.opacity * 20) / 20));
+  if (typeof d.on === 'boolean') o.on = d.on;
+  return o;
+}
 const next = (obj, k) => { const ks = Object.keys(obj); return ks[(ks.indexOf(k) + 1) % ks.length]; };
 const store = {
   get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* 無痕模式等 */ } },
 };
 
-export function mountAeroBackdrop() {
+export function mountAeroBackdrop(site) {
   const root = document.documentElement;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-  let s; try { s = { ...DEF, ...JSON.parse(store.get(KEY, '{}')) }; } catch { s = { ...DEF }; }
-  const save = () => store.set(KEY, JSON.stringify(s));
+  const base = { ...AERO_DEFAULTS, ...siteDefaults(site) };
+  let user; try { user = JSON.parse(store.get(KEY, '{}')) || {}; } catch { user = {}; }
+  const s = { ...base, ...siteDefaults(user) };
+  const changed = new Set(Object.keys(siteDefaults(user)));
+  const save = (k) => { if (k) changed.add(k); const o = {}; changed.forEach((x) => { o[x] = s[x]; }); store.set(KEY, JSON.stringify(o)); };
 
   const canvas = document.createElement('canvas');
   canvas.className = 'aero'; canvas.setAttribute('aria-hidden', 'true');
@@ -88,7 +103,7 @@ export function mountAeroBackdrop() {
         <p class="aero-panel__note">「自動」約 36 秒走完一天，網站顏色也會跟著變。</p></fieldset>
       <label class="aero-range"><span>線條濃淡</span><input type="range" min="0.15" max="1" step="0.05" data-r="opacity"><output></output></label>
       <label class="aero-range"><span>騎乘節奏</span><input type="range" min="15" max="55" step="1" data-r="speed"><output></output></label>
-      <a class="aero-panel__link" href="aero/" target="_blank" rel="noopener">開啟全螢幕獨立頁 ↗</a>
+      <div class="aero-panel__foot"><button type="button" class="aero-panel__reset" data-a="reset">恢復網站預設</button><a class="aero-panel__link" href="aero/" target="_blank" rel="noopener">開啟全螢幕獨立頁 ↗</a></div>
     </div>`;
   document.body.append(dock);
   clockEl = dock.querySelector('[data-v="clock"]');
@@ -110,7 +125,7 @@ export function mountAeroBackdrop() {
   };
   const seen = () => { hint.hidden = true; store.set(SEEN, '1'); };
   const setOpt = (k, v) => {
-    s[k] = v; save(); art.set({ [k]: v }); render(); seen();
+    s[k] = v; save(k); art.set({ [k]: v }); render(); seen();
     dock.classList.remove('is-pop'); void dock.offsetWidth; dock.classList.add('is-pop');
   };
   dock.querySelectorAll('[data-cycle]').forEach((b) => b.addEventListener('click', () => {
@@ -118,11 +133,15 @@ export function mountAeroBackdrop() {
   }));
   panel.querySelectorAll('[data-set]').forEach((b) => b.addEventListener('click', () => setOpt(b.dataset.set, b.dataset.k)));
   panel.querySelectorAll('[data-r]').forEach((r) => r.addEventListener('input', () => {
-    const v = Number(r.value); s[r.dataset.r] = v; save(); art.set({ [r.dataset.r]: v });
+    const v = Number(r.value); s[r.dataset.r] = v; save(r.dataset.r); art.set({ [r.dataset.r]: v });
     r.nextElementSibling.textContent = r.dataset.r === 'speed' ? `${v} km/h` : `${Math.round(v * 100)}%`; seen();
   }));
-  panel.querySelector('[data-a="on"]').addEventListener('change', (e) => { s.on = e.target.checked; save(); sync(); seen(); });
-  dock.querySelector('[data-a="turn-on"]').addEventListener('click', () => { s.on = true; save(); render(); sync(); });
+  panel.querySelector('[data-a="on"]').addEventListener('change', (e) => { s.on = e.target.checked; save('on'); sync(); seen(); });
+  panel.querySelector('[data-a="reset"]').addEventListener('click', () => {
+    changed.clear(); store.set(KEY, '{}'); Object.assign(s, base);
+    art.set({ style: s.style, scene: s.scene, time: s.time, speed: s.speed, opacity: s.opacity }); render(); sync();
+  });
+  dock.querySelector('[data-a="turn-on"]').addEventListener('click', () => { s.on = true; save('on'); render(); sync(); });
   hint.querySelector('button').addEventListener('click', seen);
 
   const open = (v) => { panel.hidden = !v; more.setAttribute('aria-expanded', String(v)); };
