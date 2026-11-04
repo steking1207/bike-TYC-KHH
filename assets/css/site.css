@@ -505,3 +505,77 @@ table.cmp { border-collapse: separate; border-spacing: 0; font-size: 14px; min-w
   .nowbar__btn { flex: none; width: 44px; height: 44px; border-radius: 12px; border: 0; background: var(--accent); color: #fff; font: 700 15px/1 var(--sans); cursor: pointer; }
   .nowbar__btn--ghost { background: rgba(255,255,255,.12); }
 }
+
+/* ───────── hero：照片三聯（夜 → 白天 → 午後）＋線稿動畫 ───────── */
+.hero { isolation: isolate; }
+.hero__photos { position: absolute; z-index: -1; top: -96px; height: 100%; left: 57%; right: calc((100% - 100vw) / 2); display: flex; gap: 10px; transform: skewX(-8deg); transform-origin: bottom left; overflow: hidden; pointer-events: none; }
+.hero__photos span { position: relative; flex: 1; overflow: hidden; }
+.hero__photos img { position: absolute; max-width: none; top: 0; left: -90px; width: calc(100% + 180px); height: 100%; object-fit: cover; transform: skewX(8deg) scale(1.08); opacity: 0; transition: opacity 1s var(--ease), transform 1.4s var(--ease); }
+.hero__photos img.is-on { opacity: 1; }
+.hero__photos.is-in img { transform: skewX(8deg) scale(1.0); }
+.hero__photos span:nth-child(2) img { transition-delay: .12s; }
+.hero__photos span:nth-child(3) img { transition-delay: .24s; }
+.hero__photos::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11,15,26,.35), transparent 26%, transparent 72%, rgba(11,15,26,.4)); }
+.hero--photo .route__line { stroke: #fff; stroke-width: 3.4; }
+.hero--photo .route__glow { stroke: #0B0F1A; stroke-opacity: .45; stroke-width: 9; filter: blur(3px); }
+.hero--photo .route__stop circle { fill: var(--ink); stroke: #fff; }
+.hero--photo .route__stop:not(.is-end) text { display: none; }
+.hero--photo .route__stop text { fill: #fff; stroke: none; paint-order: normal; }
+.hero--photo .route__stop text, .hero--photo .route figcaption { filter: drop-shadow(0 1px 2px rgba(0,0,0,.85)) drop-shadow(0 0 6px rgba(0,0,0,.5)); }
+.hero--photo .route__stop .route__t, .hero--photo .route__stop.is-last .route__t { fill: #FFE08A; }
+.hero--photo .route__north { fill: #fff; }
+.hero--photo .route figcaption { color: #fff; }
+.hero--photo .route__halo { fill: #fff; }
+
+.ride-art { grid-column: 1 / -1; position: relative; left: 50%; width: 100vw; transform: translateX(-50%); height: 240px; margin: clamp(24px, 4vw, 48px) 0 -36px; pointer-events: none; overflow: hidden; }
+.ride-art svg { display: block; width: 100%; height: 100%; }
+.ride-art path, .ride-art circle, .ride-art rect { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ride-art .ra-soft, .ride-art .ra-mill path, .ride-art .ra-mill circle { stroke: var(--ink); stroke-opacity: .2; stroke-width: 1.5; }
+.ride-art .ra-mill path[d^="M0 0"] { fill: var(--ink); fill-opacity: .06; }
+.ride-art .ra-blades { animation: raSpin 8s linear infinite; }
+.ride-art .ra-far { animation: raFar 48s linear infinite; }
+.ride-art .ra-ground { stroke-width: 2.4; }
+.ride-art .ra-road { stroke-opacity: .35; stroke-dasharray: 34 30; animation: raRoad .5s linear infinite; }
+.ride-art .ra-speed { stroke-opacity: .35; stroke-width: 1.6; animation: raSpeed 1.1s linear infinite; opacity: 0; }
+.ride-art .ra-tire { stroke-width: 3.2; }
+.ride-art .ra-rim { stroke-width: 1.2; stroke-opacity: .6; }
+.ride-art .ra-spoke { stroke-width: .8; stroke-opacity: .45; }
+.ride-art .ra-valve { stroke: var(--accent); stroke-width: 2; }
+.ride-art .ra-spin { transform-box: fill-box; transform-origin: center; animation: raSpin .55s linear infinite; }
+.ride-art .ra-hub { fill: var(--paper); stroke-width: 1.6; }
+.ride-art .ra-frame path { stroke-width: 2.6; }
+.ride-art .ra-frame .ra-thick { stroke-width: 4; }
+.ride-art .ra-tape { stroke: var(--accent); stroke-width: 3.4; }
+.ride-art .ra-saddle { stroke-width: 3.6; }
+.ride-art .ra-bottle { stroke-width: 1.6; fill: var(--paper); }
+.ride-art .ra-ring { stroke-width: 1.6; }
+.ride-art .ra-chain { stroke-width: 1; stroke-opacity: .6; }
+.ride-art .ra-leg { stroke-width: 5; }
+.ride-art .ra-leg--far { stroke-opacity: .32; }
+.ride-art .ra-crankarm { stroke-width: 3; }
+.ride-art .ra-torso { stroke-width: 5.5; }
+.ride-art .ra-jersey { stroke: var(--accent); stroke-width: 2.2; }
+.ride-art .ra-arm { stroke-width: 4; }
+.ride-art .ra-neck { stroke-width: 4; }
+.ride-art .ra-head { fill: var(--paper); stroke-width: 2; }
+.ride-art .ra-helmet { fill: var(--accent); stroke: var(--ink); stroke-width: 1.6; }
+.ride-art .ra-visor { stroke-width: 2.4; }
+.ride-art .ra-halo * { stroke: var(--paper) !important; stroke-opacity: 1 !important; fill: var(--paper) !important; stroke-width: 9px; }
+.ride-art .ra-halo .ra-tire, .ride-art .ra-halo .ra-rim, .ride-art .ra-halo .ra-spin, .ride-art .ra-halo .ra-hub, .ride-art .ra-halo .ra-ring, .ride-art .ra-halo .ra-chain { display: none; }
+.ride-art .ra-halo path:not(.ra-helmet) { fill: none !important; }
+.ride-art.is-paused *, .ride-art.is-still * { animation-play-state: paused; }
+@keyframes raSpin { to { transform: rotate(360deg); } }
+@keyframes raFar { to { transform: translateX(-1600px); } }
+@keyframes raRoad { to { stroke-dashoffset: -64; } }
+@keyframes raSpeed { 0% { transform: translateX(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateX(-180px); opacity: 0; } }
+@media (max-width: 960px) {
+  .hero__photos { top: -16px; bottom: -16px; height: auto !important; left: calc(var(--gutter) * -1); right: calc(var(--gutter) * -1); transform: none; gap: 6px; }
+  .hero__photos img { left: 0; width: 100%; transform: scale(1.06); }
+  .hero__photos.is-in img { transform: none; }
+  .route { isolation: isolate; }
+  .ride-art { height: 160px; }
+}
+@media (prefers-reduced-motion: reduce) { .ride-art * { animation: none !important; } }
+
+/* 全幅元素（照片底圖、線稿動畫）不造成橫向捲動 */
+.view{overflow-x:clip}
