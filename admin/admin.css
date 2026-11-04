@@ -1,6 +1,6 @@
 :root {
-  --bg: #F4F2EC; --panel: #FFFFFF; --ink: #16203A; --muted: #6A7082; --line: rgba(22,32,58,.10); --line-strong: rgba(22,32,58,.22);
-  --accent: #C94A22; --accent-soft: #FBE7DD; --warn: #B8431D; --warn-soft: #FBE7DD; --radius: 12px;
+  --bg: #F5F5F2; --panel: #FFFFFF; --ink: #0B0F1A; --muted: #5F6576; --line: rgba(11,15,26,.10); --line-strong: rgba(11,15,26,.22);
+  --accent: #E8331A; --accent-soft: #FFE4DD; --warn: #D42A10; --warn-soft: #FFE4DD; --radius: 12px;
   --f: "Inter", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
   color-scheme: light;
 }

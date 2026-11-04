@@ -56,7 +56,7 @@ export function mountMap(el, items, placesById) {
     }));
     used.forEach((u, id) => {
       const p = placesById[id]; const pos = ll(p); if (!pos) return;
-      L.circleMarker(pos, { radius: u.end ? 7 : 5, color: '#1F2A26', weight: 1.5, fillColor: u.end ? '#1F2A26' : '#fff', fillOpacity: 1 })
+      L.circleMarker(pos, { radius: u.end ? 7 : 5, color: '#0B0F1A', weight: 1.5, fillColor: u.end ? '#0B0F1A' : '#fff', fillOpacity: 1 })
         .bindTooltip(`<b>${esc(p.name)}</b>${p.sub ? `<br>${esc(p.sub)}${p.closed ? '（已歇業）' : ''}` : ''}${items.length > 1 ? `<br>停過 ${u.n} 次` : ''}`, { direction: 'top', offset: [0, -4] })
         .addTo(map);
     });
