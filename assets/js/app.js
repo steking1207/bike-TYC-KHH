@@ -62,9 +62,14 @@ function countUp(root = view) {
   });
 }
 
-function rhythmAndMap(items, extraTick) {
-  const map = mountMap($('[data-mapbox]', view), items, PLACES);
-  mountRhythm($('[data-rhythm]', view), items, { onTick: (pos) => { map.update(pos); if (extraTick) extraTick(pos); } });
+function rhythmAndMap(items, extraTick, extraState) {
+  const player = {};
+  const map = mountMap($('[data-mapbox]', view), items, PLACES, { player });
+  Object.assign(player, mountRhythm($('[data-rhythm]', view), items, {
+    onTick: (pos) => { map.update(pos); if (extraTick) extraTick(pos); },
+    onState: (st) => { map.setPlayState(st); if (extraState) extraState(st); },
+  }));
+  return player;
 }
 
 /* 單次頁面：播放時，「沿途」標出目前所在的休息站或區段，並捲動到看得到的位置 */
@@ -77,11 +82,22 @@ function followList(pos) {
   list.querySelectorAll('[data-live]').forEach((el) => { if (el.closest('[data-key]').dataset.key !== key) el.hidden = true; });
   if (!key) return;
   const cur = list.querySelector(`[data-key="${key}"]`); if (!cur) return;
+  // 手機版：地圖在上方，不自動捲動，改在畫面底部的播放列顯示目前位置（點了才捲過去）
+  const narrow = matchMedia('(max-width: 960px)').matches;
+  const bar = $('body > [data-nowbar]');
+  if (bar) {
+    const { ride, a } = p; const st = ride.stops;
+    const where = p.state === 'ride' ? `${a.place(st[p.idx].place).name} → ${a.place(st[p.idx + 1].place).name}` : p.state === 'rest' ? `${a.place(st[p.idx].place).name} 休息中` : p.state === 'done' ? '抵達終點' : '準備出發';
+    $('[data-now-txt]', bar).innerHTML = `<b>${esc(where)}</b><span>${fmtKm(p.km)} km${p.state === 'ride' && p.kmh != null ? ` · ${Math.round(p.kmh)} km/h` : ''}</span>`;
+    bar.dataset.key = key;
+  }
   if (!cur.classList.contains('is-now')) {
     cur.classList.add('is-now');
+    if (narrow) { /* 不捲動 */ } else {
     const r = cur.getBoundingClientRect();
     const strip = $('.ride-rhythm', view); const topEdge = strip && getComputedStyle(strip).position === 'sticky' ? strip.getBoundingClientRect().bottom : 70;
     if (r.top < topEdge || r.bottom > innerHeight) scrollBy({ top: r.top - (topEdge + innerHeight) / 2 + r.height / 2, behavior: REDUCED ? 'auto' : 'smooth' });
+    }
   }
   const live = cur.querySelector('[data-live]');
   if (live) { live.hidden = false; live.textContent = `🚴 ${fmtKm(p.km)} km · ${p.kmh != null ? Math.round(p.kmh) : '–'} km/h`; }
@@ -195,7 +211,7 @@ function dayBand() {
 function home() {
   const n = RIDES.length;
   const best = RIDES.reduce((b, r) => (r.a.total != null && (!b || r.a.total < b.a.total) ? r : b), null);
-  const flats = RIDES.reduce((s, r) => s + r.a.incidents.filter((x) => x.type === 'flat').length, 0);
+  const sumMin = RIDES.reduce((s, r) => s + (r.a.total || 0), 0);
   const sumKm = RIDES.reduce((s, r) => s + (r.a.km || 0), 0);
   const avgKm = n ? sumKm / n : 0;
   const yrs = n ? `${RIDES[n - 1].ride.date.slice(0, 4)}–${RIDES[0].ride.date.slice(0, 4)}` : '';
@@ -209,8 +225,7 @@ function home() {
         <dl class="hero__stats rv" style="--d:.28s">
           <div><dd data-count="${n}">0</dd><dt>次完成</dt></div>
           <div><dd><span data-count="${Math.round(sumKm)}">0</span><small>km</small></dd><dt>累計距離</dt></div>
-          <div><dd data-count="${best ? best.a.total : 0}" data-kind="dur">–</dd><dt>最快一次（${best ? ordinal(best.ride.no) : '–'}）</dt></div>
-          <div><dd data-count="${flats}">0</dd><dt>次爆胎</dt></div>
+          <div><dd data-count="${sumMin}" data-kind="dur">–</dd><dt>總計時間</dt></div>
         </dl>
       </div>
       <figure class="route" data-route></figure>
@@ -302,7 +317,19 @@ function rideView(no) {
       <section class="ride-cols__map"><h2><span>02</span>地圖</h2><div data-mapbox></div></section>
     </div>
     <nav class="pager" aria-label="其他場次">${prev ? `<a href="#/ride/${prev.ride.no}"><span>← 上一次</span><b>第 ${prev.ride.no} 次</b><span>${dot(prev.ride.date)}</span></a>` : ''}${next ? `<a class="next" href="#/ride/${next.ride.no}"><span>下一次 →</span><b>第 ${next.ride.no} 次</b><span>${dot(next.ride.date)}</span></a>` : ''}</nav>`;
-  rhythmAndMap([RIDES[i]], followList);
+  // 掛在 body 上：view 有進場動畫的 transform，fixed 會失效
+  document.body.insertAdjacentHTML('beforeend', `<div class="nowbar" data-nowbar hidden role="status">
+      <button type="button" class="nowbar__txt" data-now-txt title="捲到沿途的這一段"></button>
+      <button type="button" class="nowbar__btn" data-now-pause aria-label="暫停">❚❚</button>
+      <button type="button" class="nowbar__btn nowbar__btn--ghost" data-now-stop aria-label="停止">■</button></div>`);
+  const bar = $('body > [data-nowbar]');
+  const player = rhythmAndMap([RIDES[i]], followList, (st) => {
+    bar.hidden = !st.playing && !st.finished;
+    const b = $('[data-now-pause]', bar); b.textContent = st.paused ? '▶' : '❚❚'; b.setAttribute('aria-label', st.paused ? '繼續' : '暫停'); b.hidden = st.finished;
+  });
+  $('[data-now-pause]', bar).addEventListener('click', () => player.togglePause());
+  $('[data-now-stop]', bar).addEventListener('click', () => player.stop());
+  $('[data-now-txt]', bar).addEventListener('click', () => { const t = $(`.tl [data-key="${bar.dataset.key}"]`, view); if (t) t.scrollIntoView({ block: 'center', behavior: REDUCED ? 'auto' : 'smooth' }); });
 }
 
 let selected = null;
@@ -365,6 +392,7 @@ function navInk() {
 }
 
 function route() {
+  document.querySelectorAll('body > .nowbar').forEach((x) => x.remove());
   const [, page, arg] = (location.hash || '#/').split('/');
   document.querySelectorAll('[data-nav]').forEach((a) => a.removeAttribute('aria-current'));
   const nav = page === 'compare' ? 'compare' : page ? '' : 'home';

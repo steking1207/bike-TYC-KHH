@@ -66,7 +66,7 @@ function sampler(W) {
 export function mountWeather(L, map, host, items, trackOf) {
   const byNo = Object.fromEntries(items.map((it) => [it.ride.no, it]));
   const latest = Math.max(...items.map((it) => it.ride.no));
-  const state = { layer: 'wind', no: latest, minute: null, W: null, F: null, playing: false };
+  const state = { layer: 'wind', no: latest, minute: null, W: null, F: null, playing: false, multi: false };
 
   // ---- 畫布：放在自己的 pane（磚圖之上、路線之下） ----
   const pane = map.createPane('weather'); pane.style.zIndex = 350; pane.style.pointerEvents = 'none';
@@ -137,7 +137,7 @@ export function mountWeather(L, map, host, items, trackOf) {
   }
   let lastKey = '';
   function refresh() {
-    if (!state.W) { clearAll(); return; }
+    if (!state.W || state.multi) { clearAll(); return; }
     state.F = frameAt(state.W, state.minute);
     // 播放時每一幀都會呼叫：場的底色每 2 分鐘（資料時間）才重畫一次
     const key = `${state.layer}|${Math.round(state.minute / 2)}|${W}x${H}|${map.getZoom()}|${map.getCenter().toString()}`;
@@ -186,7 +186,7 @@ export function mountWeather(L, map, host, items, trackOf) {
 
   // ---- 風場粒子（Windy 那種流線） ----
   let parts = []; let raf = 0; let moving = false;
-  const wantFlow = () => state.layer === 'wind' && !!state.F && !REDUCED && !moving && !document.hidden && host.isConnected;
+  const wantFlow = () => state.layer === 'wind' && !!state.F && !state.multi && !REDUCED && !moving && !document.hidden && host.isConnected;
   function spawn(p) { p.x = Math.random() * W; p.y = Math.random() * H; p.age = Math.random() * 80 | 0; p.px = p.x; p.py = p.y; return p; }
   function seed() { const n = Math.round(Math.min(2400, (W * H) / 900)); parts = Array.from({ length: n }, () => spawn({})); }
   function tick() {
@@ -278,6 +278,10 @@ export function mountWeather(L, map, host, items, trackOf) {
     /* positions：節奏播放每一幀的 [{ride, clock, …}]；null = 沒在播 */
     update(positions, riderAt) {
       const list = positions || [];
+      // 兩趟以上一起播放時是不同日期，天氣對不起來，先整個藏起來
+      const multi = list.length > 1;
+      if (multi !== state.multi) { state.multi = multi; ui.hidden = multi; if (!multi) { lastKey = ''; refresh(); kick(); } }
+      if (multi) { clearAll(); return; }
       state.playing = list.length > 0;
       ui.classList.toggle('is-live', state.playing);
       range.disabled = state.playing;
