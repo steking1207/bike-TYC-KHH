@@ -1,35 +1,49 @@
 /*
- * 背景騎乘動畫：三層山稜視差、風車與彎把公路車騎士（Canvas）。
- * 改寫自使用者提供的 AERO CYCLING 線稿頁（獨立頁在 aero/），
- * 這裡改成可嵌入的模組：畫在指定 canvas 的大小內，顏色跟網站一致，文字 ≥13px。
+ * 背景騎乘動畫 v5：日夜循環、山稜／城市場景、風車與彎把公路車騎士（Canvas）。
+ * 改寫自使用者提供的 AERO CYCLING 線稿頁（原頁在 aero/），改成可嵌入的模組：
+ * 畫在指定 canvas 的大小內，日夜配色透過 onPalette 回呼交給網站同步，畫布文字 ≥13px。
  */
-const PAPER = '#F5F5F2';
-
 export function mountAero(canvas, opts = {}) {
   let VW = 0; let VH = 0; let raf = 0; let running = false;
+  const onPalette = opts.onPalette || (() => {});
   /**
    * ============================================================================
-   * AERO CYCLING — 三層山稜視差與 Path2D 解剖學彎把公路車騎士引擎
+   * AERO CYCLING v5.0 — 日夜循環 + 城市/山稜視差 + Path2D 解剖學彎把公路車引擎
    * ============================================================================
    */
   const ctx = canvas.getContext('2d');
 
-  // 狀態管理
-  const isDark = false;
+  // 核心狀態管理（線條濃淡預設 50% = 0.50）
   let cyclistStyle = opts.style || 'sculpted'; // 'sculpted' | 'hatched' | 'blueprint' | 'ribbon'
-  let lineOpacity = opts.opacity ?? 0.75;
+  let sceneMode = opts.scene || 'hybrid';      // 'hybrid' (山城混合) | 'city' (純城市) | 'mountain' (純山稜)
+  let dayNightMode = opts.time || 'auto';     // 'auto' | 'day' | 'dusk' | 'night'
+  const START = { day: 10.5, dusk: 17.6, night: 22.5 };
+  let timeOfDay = START[opts.time] ?? opts.clock ?? 10.5; // 24 小時制時間 (0.0 ~ 24.0)
+  let targetTimeOfDay = timeOfDay;
+  let lineOpacity = opts.opacity ?? 0.50;        // 預設 50% 線條濃淡
   let targetSpeed = opts.speed ?? 34.0;
   let currentSpeed = targetSpeed;
+
+  // 動態日夜色彩緩存
+  let currentPalette = {
+    bgHex: '#f6f5f2',
+    inkRgb: [39, 39, 42],
+    subRgb: [82, 82, 91],
+    faintRgb: [161, 161, 170],
+    accentRgb: [14, 116, 144],
+    nightFactor: 0.0, // 0 = 白天, 0.5 = 黃昏, 1.0 = 黑夜
+    duskFactor: 0.0
+  };
 
   // 動畫時間與物理相位
   let lastTime = performance.now();
   let pedalPhase = 0;
-    let riderScale = 1;
+  let riderScale = 1;
   let wheelPhase = 0;
   let roadOffset = 0;
-  let ridgeOffsets = [0, 0, 0]; // 遠山、中山、近丘陵水平視差位移
+  let ridgeOffsets = [0, 0, 0]; // 遠景、中景、近景水平視差位移
 
-  // 三層景深風力發電機配置 (layer: 0=遠山, 1=中山, 2=近景平原)
+  // 三層景深風力發電機配置 (layer: 0=遠景, 1=中景, 2=近景)
   const turbines = [
     { xRatio: 0.10, scale: 0.34, layer: 0, angle: 0.4, speedMult: 0.72 },
     { xRatio: 0.35, scale: 0.39, layer: 0, angle: 2.1, speedMult: 0.78 },
@@ -43,6 +57,24 @@ export function mountAero(canvas, opts = {}) {
     { xRatio: 0.07, scale: 0.96, layer: 2, angle: 0.8, speedMult: 1.12 },
     { xRatio: 0.68, scale: 1.04, layer: 2, angle: 2.9, speedMult: 1.08 }
   ];
+
+  // 夜空幾何星象與星座連線配置
+  const starField = [];
+  function initStars() {
+    starField.length = 0;
+    for (let i = 0; i < 42; i++) {
+      const seed = (i * 9301 + 49297) % 233280;
+      const r1 = seed / 233280;
+      const r2 = ((seed * 7) % 233280) / 233280;
+      starField.push({
+        xRatio: (i / 42) + (r1 - 0.5) * 0.02,
+        yRatio: 0.05 + r2 * 0.42,
+        size: 1.1 + (i % 3) * 0.65,
+        twinklePhase: i * 1.3,
+        connectNext: i % 5 === 0 || i % 5 === 1
+      });
+    }
+  }
 
   // 氣流微粒線
   const windStreaks = [];
@@ -69,37 +101,290 @@ export function mountAero(canvas, opts = {}) {
     ctx.resetTransform();
     ctx.scale(dpr, dpr);
     initWindStreaks();
-  }
-
-  // 取得當前主題與畫風對應之背景色与線條色彩
-  function getBgColor() { return PAPER; }
-
-  function strokeCol(tier = 'ink', alpha = 1) {
-    let rgb = '11, 15, 26';
-    if (cyclistStyle === 'blueprint') {
-      if (tier === 'ink') rgb = isDark ? '210, 238, 255' : '15, 58, 92';
-      else if (tier === 'sub') rgb = isDark ? '110, 178, 225' : '38, 102, 148';
-      else if (tier === 'faint') rgb = isDark ? '52, 108, 155' : '115, 162, 198';
-      else if (tier === 'accent') rgb = isDark ? '56, 189, 248' : '2, 132, 199';
-    } else {
-      if (tier === 'sub') rgb = isDark ? '161, 161, 170' : '82, 82, 91';
-      if (tier === 'faint') rgb = isDark ? '82, 82, 91' : '161, 161, 170';
-      if (tier === 'accent') rgb = '255, 59, 31';
-    }
-    const finalAlpha = Math.max(0.03, Math.min(1, alpha * lineOpacity));
-    return `rgba(${rgb}, ${finalAlpha})`;
+    if (starField.length === 0) initStars();
   }
 
   /**
    * ============================================================================
-   * 0. 全局天空與背景環境層（依畫風切換：CAD 正交工程網格 / 版畫天空微風 / CFD 風洞層流線）
+   * 日夜色彩插值系統 (Day / Dusk / Night Smooth Color Interpolation)
    * ============================================================================
    */
-  function drawSkyAndEnvironmentBackdrop(w, h, roadY, cyclistX, time) {
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
+  function lerpRgb(c1, c2, t) {
+    return [
+      Math.round(lerp(c1[0], c2[0], t)),
+      Math.round(lerp(c1[1], c2[1], t)),
+      Math.round(lerp(c1[2], c2[2], t))
+    ];
+  }
+
+  function rgbToHex(rgb) {
+    return '#' + rgb.map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')).join('');
+  }
+
+  function updateDayNightPalette(dt) {
+    if (dayNightMode === 'auto') {
+      // 自動循環：約每 36 秒完成一整天 24 小時日夜循環
+      timeOfDay = (timeOfDay + dt * 0.68) % 24;
+    } else {
+      // 直接切換時，平滑過渡至目標時段
+      let diff = targetTimeOfDay - timeOfDay;
+      if (diff > 12) diff -= 24;
+      if (diff < -12) diff += 24;
+      timeOfDay = (timeOfDay + diff * Math.min(1, dt * 5.5) + 24) % 24;
+    }
+
+    // 將 24 小時映射為白天 (Day: 7~16)、黃昏/破曉 (Dusk/Dawn: 5~7, 16~20)、黑夜 (Night: 20~5)
+    let nightF = 0;
+    let duskF = 0;
+
+    if (timeOfDay >= 7.5 && timeOfDay <= 16.0) {
+      nightF = 0;
+      duskF = 0;
+    } else if (timeOfDay > 16.0 && timeOfDay < 18.2) {
+      // 下午進入黃昏
+      const t = (timeOfDay - 16.0) / 2.2;
+      duskF = Math.sin(t * Math.PI * 0.5);
+      nightF = t * 0.35;
+    } else if (timeOfDay >= 18.2 && timeOfDay < 20.2) {
+      // 黃昏進入黑夜
+      const t = (timeOfDay - 18.2) / 2.0;
+      duskF = Math.cos(t * Math.PI * 0.5);
+      nightF = 0.35 + t * 0.65;
+    } else if (timeOfDay >= 20.2 || timeOfDay < 4.5) {
+      // 深邃黑夜
+      nightF = 1.0;
+      duskF = 0.0;
+    } else if (timeOfDay >= 4.5 && timeOfDay < 6.0) {
+      // 破曉微光
+      const t = (timeOfDay - 4.5) / 1.5;
+      duskF = Math.sin(t * Math.PI * 0.5);
+      nightF = 1.0 - t * 0.65;
+    } else {
+      // 6.0 ~ 7.5 日出轉白天
+      const t = (timeOfDay - 6.0) / 1.5;
+      duskF = Math.cos(t * Math.PI * 0.5);
+      nightF = 0.35 * (1 - t);
+    }
+
+    // 定義三種基準調色盤 (Day / Dusk / Night) 與藍圖專屬色盤
+    const isBlueprint = cyclistStyle === 'blueprint';
+
+    const dayPal = isBlueprint
+      ? { bg: [238, 244, 248], ink: [15, 58, 92], sub: [38, 102, 148], faint: [115, 162, 198], accent: [2, 132, 199] }
+      : { bg: [245, 245, 242], ink: [11, 15, 26], sub: [82, 82, 91], faint: [161, 161, 170], accent: [14, 116, 144] };
+
+    const duskPal = isBlueprint
+      ? { bg: [34, 48, 68], ink: [224, 242, 254], sub: [125, 211, 252], faint: [71, 128, 168], accent: [251, 191, 36] }
+      : { bg: [232, 221, 206], ink: [52, 42, 38], sub: [108, 88, 76], faint: [168, 148, 134], accent: [194, 65, 12] };
+
+    const nightPal = isBlueprint
+      ? { bg: [11, 19, 30], ink: [215, 240, 255], sub: [110, 178, 225], faint: [48, 98, 142], accent: [56, 189, 248] }
+      : { bg: [18, 20, 24], ink: [228, 228, 234], sub: [152, 156, 168], faint: [78, 82, 94], accent: [245, 158, 11] };
+
+    // 先由 Day 與 Night 線性插值，再疊加 Dusk 暮色過渡
+    let bgRgb = lerpRgb(dayPal.bg, nightPal.bg, nightF);
+    let inkRgb = lerpRgb(dayPal.ink, nightPal.ink, nightF);
+    let subRgb = lerpRgb(dayPal.sub, nightPal.sub, nightF);
+    let faintRgb = lerpRgb(dayPal.faint, nightPal.faint, nightF);
+    let accentRgb = lerpRgb(dayPal.accent, nightPal.accent, nightF);
+
+    if (duskF > 0.01) {
+      bgRgb = lerpRgb(bgRgb, duskPal.bg, duskF * 0.78);
+      inkRgb = lerpRgb(inkRgb, duskPal.ink, duskF * 0.78);
+      subRgb = lerpRgb(subRgb, duskPal.sub, duskF * 0.78);
+      faintRgb = lerpRgb(faintRgb, duskPal.faint, duskF * 0.78);
+      accentRgb = lerpRgb(accentRgb, duskPal.accent, duskF * 0.85);
+    }
+
+    const bgHex = rgbToHex(bgRgb);
+    const textHex = rgbToHex(inkRgb);
+
+    currentPalette = {
+      bgHex,
+      inkRgb,
+      subRgb,
+      faintRgb,
+      accentRgb,
+      nightFactor: nightF,
+      duskFactor: duskF
+    };
+
+    onPalette({ bgRgb, inkRgb, subRgb, accentRgb, nightF, duskF, timeOfDay });
+  }
+
+  function getBgColor() {
+    return currentPalette.bgHex;
+  }
+
+  function strokeCol(tier = 'ink', alpha = 1) {
+    let rgbArr = currentPalette.inkRgb;
+    if (tier === 'sub') rgbArr = currentPalette.subRgb;
+    else if (tier === 'faint') rgbArr = currentPalette.faintRgb;
+    else if (tier === 'accent') rgbArr = currentPalette.accentRgb;
+
+    const finalAlpha = Math.max(0.02, Math.min(1, alpha * lineOpacity));
+    return `rgba(${rgbArr[0]}, ${rgbArr[1]}, ${rgbArr[2]}, ${finalAlpha})`;
+  }
+
+  /**
+   * ============================================================================
+   * 0. 全局天空、日夜天體運行軌跡（太陽 / 弦月 / 星座座標）與環境流場
+   * ============================================================================
+   */
+  function drawCelestialAndSky(w, h, roadY, cyclistX, time) {
     ctx.save();
 
+    const nightF = currentPalette.nightFactor;
+    const duskF = currentPalette.duskFactor;
+
+    // A. 繪製極簡天體運行軌跡弧 (Celestial Trajectory Arc)
+    const arcCx = w * 0.52;
+    const arcCy = roadY + h * 0.12;
+    const arcRx = w * 0.44;
+    const arcRy = roadY * 0.78;
+
+    const orbitPath = new Path2D();
+    orbitPath.ellipse(arcCx, arcCy, arcRx, arcRy, 0, Math.PI * 1.12, Math.PI * 1.88);
+    ctx.strokeStyle = strokeCol('faint', 0.22);
+    ctx.lineWidth = 0.75;
+    ctx.setLineDash([4, 6]);
+    ctx.stroke(orbitPath);
+    ctx.setLineDash([]);
+
+    // B. 夜晚與黃昏星象圖 (Constellation Stars & Crosshairs)
+    if (nightF > 0.12) {
+      const starAlpha = (nightF - 0.12) / 0.88;
+      const constellationPath = new Path2D();
+
+      for (let i = 0; i < starField.length; i++) {
+        const st = starField[i];
+        const sx = ((st.xRatio * w - ridgeOffsets[0] * 0.05) % w + w) % w;
+        const sy = st.yRatio * roadY;
+        const twinkle = 0.65 + 0.35 * Math.sin(time * 0.003 + st.twinklePhase);
+
+        // 繪製星點或十字星芒
+        const starCross = new Path2D();
+        const r = st.size * twinkle;
+        starCross.moveTo(sx - r * 1.8, sy);
+        starCross.lineTo(sx + r * 1.8, sy);
+        starCross.moveTo(sx, sy - r * 1.8);
+        starCross.lineTo(sx, sy + r * 1.8);
+        ctx.strokeStyle = strokeCol(i % 4 === 0 ? 'accent' : 'sub', starAlpha * 0.65 * twinkle);
+        ctx.lineWidth = 0.8;
+        ctx.stroke(starCross);
+
+        // 幾何星座虛線連線
+        if (st.connectNext && i + 1 < starField.length) {
+          const nextSt = starField[i + 1];
+          const nx = ((nextSt.xRatio * w - ridgeOffsets[0] * 0.05) % w + w) % w;
+          const ny = nextSt.yRatio * roadY;
+          if (Math.hypot(nx - sx, ny - sy) < w * 0.16) {
+            constellationPath.moveTo(sx, sy);
+            constellationPath.lineTo(nx, ny);
+          }
+        }
+      }
+
+      ctx.strokeStyle = strokeCol('faint', starAlpha * 0.28);
+      ctx.lineWidth = 0.65;
+      ctx.setLineDash([2, 4]);
+      ctx.stroke(constellationPath);
+      ctx.setLineDash([]);
+    }
+
+    // C. 太陽位置計算與繪製 (06:00 日出 -> 12:00 正午 -> 18:30 日落)
+    if (timeOfDay >= 5.2 && timeOfDay <= 19.2) {
+      const sunProg = (timeOfDay - 5.2) / 14.0; // 0 ~ 1
+      const sunAngle = Math.PI * (1.14 + sunProg * 0.72);
+      const sunX = arcCx + Math.cos(sunAngle) * arcRx;
+      const sunY = arcCy + Math.sin(sunAngle) * arcRy;
+      const sunR = duskF > 0.2 ? 24 : 18;
+
+      ctx.save();
+      ctx.translate(sunX, sunY);
+
+      // 外圍光暈同心線圈
+      const haloPath = new Path2D();
+      haloPath.arc(0, 0, sunR + 9, 0, Math.PI * 2);
+      ctx.strokeStyle = strokeCol(duskF > 0.25 ? 'accent' : 'faint', 0.35);
+      ctx.lineWidth = 0.8;
+      ctx.setLineDash(cyclistStyle === 'blueprint' ? [3, 3] : [8, 4]);
+      ctx.stroke(haloPath);
+      ctx.setLineDash([]);
+
+      // 太陽本體
+      const sunBody = new Path2D();
+      sunBody.arc(0, 0, sunR, 0, Math.PI * 2);
+      ctx.fillStyle = getBgColor();
+      ctx.fill(sunBody);
+
+      if (cyclistStyle === 'hatched') {
+        drawHatchingInPath(sunBody, -sunR, sunR, -sunR, sunR, 3.8, 0.42);
+      }
+
+      ctx.strokeStyle = strokeCol(duskF > 0.25 ? 'accent' : 'sub', 0.82);
+      ctx.lineWidth = 1.4;
+      ctx.stroke(sunBody);
+
+      if (cyclistStyle === 'blueprint') {
+        ctx.font = '400 13px "JetBrains Mono", monospace';
+        ctx.fillStyle = strokeCol('accent', 0.75);
+        ctx.fillText(`SOL AZ.${Math.round(sunProg * 180)}°`, sunR + 12, 3);
+      }
+      ctx.restore();
+    }
+
+    // D. 弦月位置計算與繪製 (17:30 月升 -> 00:00 子夜 -> 06:30 月落)
+    const moonTime = (timeOfDay + 6) % 24; // 將夜晚中心移至正中
+    if (moonTime >= 5.0 && moonTime <= 19.0) {
+      const moonProg = (moonTime - 5.0) / 14.0;
+      const moonAngle = Math.PI * (1.15 + moonProg * 0.70);
+      const moonX = arcCx + Math.cos(moonAngle) * arcRx;
+      const moonY = arcCy + Math.sin(moonAngle) * arcRy;
+      const moonR = 16;
+
+      ctx.save();
+      ctx.translate(moonX, moonY);
+      ctx.rotate(-0.35);
+
+      const moonHalo = new Path2D();
+      moonHalo.arc(0, 0, moonR + 8, 0, Math.PI * 2);
+      ctx.strokeStyle = strokeCol('faint', 0.3 * nightF);
+      ctx.lineWidth = 0.75;
+      ctx.setLineDash([2, 4]);
+      ctx.stroke(moonHalo);
+      ctx.setLineDash([]);
+
+      // 精緻弦月輪廓 (Crescent Moon Path2D)
+      const crescent = new Path2D();
+      crescent.arc(0, 0, moonR, -Math.PI * 0.65, Math.PI * 0.65, false);
+      crescent.quadraticCurveTo(-moonR * 0.15, 0, Math.cos(-Math.PI * 0.65) * moonR, Math.sin(-Math.PI * 0.65) * moonR);
+      crescent.closePath();
+
+      ctx.fillStyle = getBgColor();
+      ctx.fill(crescent);
+      if (cyclistStyle === 'hatched') {
+        drawHatchingInPath(crescent, -moonR, moonR, -moonR, moonR, 3.4, 0.5);
+      }
+      ctx.strokeStyle = strokeCol('ink', 0.88);
+      ctx.lineWidth = 1.4;
+      ctx.stroke(crescent);
+
+      if (cyclistStyle === 'blueprint') {
+        ctx.rotate(0.35);
+        ctx.font = '400 13px "JetBrains Mono", monospace';
+        ctx.fillStyle = strokeCol('accent', 0.8);
+        ctx.fillText('LUNA PHASE 0.28', moonR + 10, 3);
+      }
+      ctx.restore();
+    }
+
+    // E. 依畫風繪製天空背景網格 / 版畫雲線 / 風洞層流線
     if (cyclistStyle === 'blueprint') {
-      // 模式 C：全畫面 CAD 正交工程方格網 (Ortho Grid) 與十字準星 (+)
       const minorStep = 36;
       const majorStep = 180;
       const gridMinor = new Path2D();
@@ -132,7 +417,6 @@ export function mountAero(canvas, opts = {}) {
       ctx.lineWidth = 0.85;
       ctx.stroke(gridMajor);
 
-      // 交點十字準星 (+) 與座標標記
       const crossPath = new Path2D();
       ctx.font = '400 13px "JetBrains Mono", monospace';
       ctx.fillStyle = strokeCol('faint', 0.55);
@@ -149,7 +433,6 @@ export function mountAero(canvas, opts = {}) {
       ctx.lineWidth = 0.9;
       ctx.stroke(crossPath);
     } else if (cyclistStyle === 'hatched') {
-      // 模式 B：版畫天空雲層與微風平行短刻線 (Etched Sky Breeze Clusters)
       const skyHatch = new Path2D();
       const bandCount = 5;
       for (let b = 0; b < bandCount; b++) {
@@ -166,7 +449,6 @@ export function mountAero(canvas, opts = {}) {
       ctx.lineWidth = 0.8;
       ctx.stroke(skyHatch);
     } else if (cyclistStyle === 'ribbon') {
-      // 模式 D：全畫面連續 CFD 風洞層流線 (Laminar Streamlines)，經過騎士上方時產生流體繞流拱起
       const streamCount = 9;
       const cY = roadY - 95;
       for (let i = 0; i < streamCount; i++) {
@@ -176,7 +458,6 @@ export function mountAero(canvas, opts = {}) {
           const dx = x - cyclistX;
           const dy = baseY - cY;
           const distSq = dx * dx + dy * dy * 1.8;
-          // 流體力學偶極繞流效應：靠近騎士上方時流線平滑向上拱起繞過
           const deflect = -Math.exp(-distSq / 18000) * 34 * Math.max(0.15, 1 - Math.abs(dy) / 220);
           const wave = Math.sin((x + ridgeOffsets[1] * 2.2) * 0.008 + i * 0.9) * 5.5;
           const py = baseY + deflect + wave;
@@ -187,6 +468,434 @@ export function mountAero(canvas, opts = {}) {
         ctx.lineWidth = i % 3 === 0 ? 1.15 : 0.75;
         ctx.stroke(streamPath);
       }
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * ============================================================================
+   * 1B. 城市建築天際線與現代橋樑視差層 (3-Layer Architectural City Skyline)
+   * 支援 A塊面遮罩建築 / B版畫立面陰影排線 / C結構鋼骨藍圖 / D流體都市輪廓線 + 夜間窗景與航空警示燈
+   * ============================================================================
+   */
+  function getBuildingSpec(slotIndex, layerIndex) {
+    const h1 = Math.abs(Math.sin(slotIndex * 12.9898 + layerIndex * 78.233) * 43758.5453);
+    const r1 = h1 - Math.floor(h1);
+    const h2 = Math.abs(Math.sin(slotIndex * 39.346 + layerIndex * 11.135) * 23421.631);
+    const r2 = h2 - Math.floor(h2);
+
+    // 在特定區塊保留開闊河岸或跨海斜張橋，讓畫面呼吸且不呆板
+    const modSlot = ((slotIndex % 10) + 10) % 10;
+    if (modSlot === 4) {
+      return { type: 'bridge', width: 110, height: [95, 78, 52][layerIndex], r1, r2 };
+    }
+    if (modSlot === 8 || (sceneMode === 'hybrid' && modSlot % 3 === 0)) {
+      return { type: 'gap' };
+    }
+
+    const baseH = [185, 130, 74][layerIndex];
+    const varH = [95, 72, 42][layerIndex];
+    const height = baseH * 0.45 + r1 * varH;
+    const width = [44, 52, 58][layerIndex] + r2 * 26;
+
+    let styleType = 'modern';
+    if (r1 > 0.72) styleType = 'stepped'; // 階梯式摩天大樓 + 尖塔
+    else if (r2 > 0.68) styleType = 'diag'; // 幾何斜頂/結構斜撐大樓
+
+    return { type: styleType, width, height, r1, r2, hasSpire: r1 > 0.62 };
+  }
+
+  function drawCitySkylineLayer(w, roadY, layerIndex, scrollOffset, time) {
+    const slotSpan = [66, 78, 92][layerIndex];
+    const startSlot = Math.floor(scrollOffset / slotSpan) - 2;
+    const endSlot = Math.ceil((scrollOffset + w) / slotSpan) + 2;
+    const alphaLayer = [0.42, 0.64, 0.84][layerIndex];
+    const lineW = [1.0, 1.35, 1.65][layerIndex];
+    const nightF = currentPalette.nightFactor;
+    const duskF = currentPalette.duskFactor;
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = cyclistStyle === 'blueprint' ? 'miter' : 'round';
+
+    // 模式 D【流體風洞動線】：城市建築化為多道連續流動的都市天際線等高絲帶
+    if (cyclistStyle === 'ribbon') {
+      const strandCount = 4;
+      for (let s = 0; s < strandCount; s++) {
+        const skylineRibbon = new Path2D();
+        let started = false;
+        for (let slot = startSlot; slot <= endSlot; slot++) {
+          const sx = slot * slotSpan - scrollOffset;
+          const spec = getBuildingSpec(slot, layerIndex);
+          const topY = spec.type === 'gap'
+            ? roadY - 6
+            : roadY - spec.height + s * 11;
+
+          if (!started) {
+            skylineRibbon.moveTo(sx, roadY);
+            started = true;
+          }
+          skylineRibbon.lineTo(sx + 4, topY);
+          skylineRibbon.lineTo(sx + slotSpan - 6, topY);
+          skylineRibbon.lineTo(sx + slotSpan, roadY);
+        }
+        ctx.strokeStyle = strokeCol(s === 0 ? 'sub' : 'faint', alphaLayer * (1 - s * 0.22));
+        ctx.lineWidth = s === 0 ? lineW : 0.8;
+        ctx.stroke(skylineRibbon);
+      }
+      ctx.restore();
+      return;
+    }
+
+    for (let slot = startSlot; slot <= endSlot; slot++) {
+      const spec = getBuildingSpec(slot, layerIndex);
+      if (spec.type === 'gap') continue;
+
+      const bx = slot * slotSpan - scrollOffset;
+      const bw = Math.min(spec.width, slotSpan - 4);
+      const bh = spec.height;
+      const topY = roadY - bh;
+
+      // 1. 現代斜張橋 (Cable-Stayed Suspension Bridge)
+      if (spec.type === 'bridge') {
+        const pylonX = bx + slotSpan * 0.5;
+        const pylonTopY = roadY - bh * 1.15;
+        const deckY = roadY - bh * 0.32;
+
+        // 橋塔與斜張鋼索
+        const cablesPath = new Path2D();
+        for (let c = 1; c <= 5; c++) {
+          const anchorOffset = c * (slotSpan * 0.16);
+          const pylonAnchorY = pylonTopY + c * 6;
+          cablesPath.moveTo(pylonX, pylonAnchorY);
+          cablesPath.lineTo(pylonX - anchorOffset, deckY);
+          cablesPath.moveTo(pylonX, pylonAnchorY);
+          cablesPath.lineTo(pylonX + anchorOffset, deckY);
+        }
+        ctx.strokeStyle = strokeCol('faint', alphaLayer * 0.65);
+        ctx.lineWidth = 0.75;
+        ctx.stroke(cablesPath);
+
+        // A字型或H型橋塔
+        const pylonPath = new Path2D();
+        pylonPath.moveTo(pylonX - 5, roadY);
+        pylonPath.lineTo(pylonX - 2, pylonTopY);
+        pylonPath.lineTo(pylonX + 2, pylonTopY);
+        pylonPath.lineTo(pylonX + 5, roadY);
+        pylonPath.closePath();
+        ctx.fillStyle = getBgColor();
+        ctx.fill(pylonPath);
+        ctx.strokeStyle = strokeCol('sub', alphaLayer);
+        ctx.lineWidth = lineW;
+        ctx.stroke(pylonPath);
+
+        // 橋面雙線橫樑
+        const deckPath = new Path2D();
+        deckPath.rect(pylonX - slotSpan * 0.85, deckY - 3, slotSpan * 1.7, 4);
+        ctx.fill(deckPath);
+        ctx.stroke(deckPath);
+        continue;
+      }
+
+      // 2. 摩天大樓主體多邊形 (Isolated Path2D)
+      const bldgPath = new Path2D();
+      if (spec.type === 'stepped') {
+        const step1Y = roadY - bh * 0.72;
+        const step2Y = roadY - bh * 0.90;
+        bldgPath.moveTo(bx, roadY);
+        bldgPath.lineTo(bx, step1Y);
+        bldgPath.lineTo(bx + bw * 0.14, step1Y);
+        bldgPath.lineTo(bx + bw * 0.14, step2Y);
+        bldgPath.lineTo(bx + bw * 0.28, step2Y);
+        bldgPath.lineTo(bx + bw * 0.28, topY);
+        bldgPath.lineTo(bx + bw * 0.72, topY);
+        bldgPath.lineTo(bx + bw * 0.72, step2Y);
+        bldgPath.lineTo(bx + bw * 0.86, step2Y);
+        bldgPath.lineTo(bx + bw * 0.86, step1Y);
+        bldgPath.lineTo(bx + bw, step1Y);
+        bldgPath.lineTo(bx + bw, roadY);
+        bldgPath.closePath();
+      } else if (spec.type === 'diag') {
+        bldgPath.moveTo(bx, roadY);
+        bldgPath.lineTo(bx, topY + 16);
+        bldgPath.lineTo(bx + bw * 0.82, topY);
+        bldgPath.lineTo(bx + bw, topY + 8);
+        bldgPath.lineTo(bx + bw, roadY);
+        bldgPath.closePath();
+      } else {
+        bldgPath.rect(bx, topY, bw, bh);
+      }
+
+      // 背景色遮罩填滿，遮擋後方層級
+      ctx.fillStyle = getBgColor();
+      ctx.fill(bldgPath);
+
+      // 模式 B【版畫排線插畫】：在建築物背光立面（左半側 38% 寬度）以獨立 Path2D 裁切繪製 45° 銅版畫陰影斜線
+      if (cyclistStyle === 'hatched') {
+        ctx.save();
+        ctx.clip(bldgPath);
+        const shadowW = bw * 0.38;
+        const sideShadow = new Path2D();
+        sideShadow.rect(bx, topY, shadowW, bh);
+        drawHatchingInPath(sideShadow, bx - 4, bx + shadowW + 4, topY - 4, roadY + 4, 4.2, alphaLayer * 0.62);
+        ctx.restore();
+      }
+
+      // 模式 C【工程藍圖結構】：繪製建築結構交叉鋼骨斜撐 (X-Bracing Truss) 與樓高標註
+      if (cyclistStyle === 'blueprint') {
+        ctx.save();
+        ctx.clip(bldgPath);
+        const bracePath = new Path2D();
+        const tierH = 26;
+        for (let y = roadY; y > topY; y -= tierH) {
+          bracePath.moveTo(bx, y);
+          bracePath.lineTo(bx + bw, y);
+          bracePath.moveTo(bx, y);
+          bracePath.lineTo(bx + bw, y - tierH);
+          bracePath.moveTo(bx + bw, y);
+          bracePath.lineTo(bx, y - tierH);
+        }
+        ctx.strokeStyle = strokeCol('faint', alphaLayer * 0.45);
+        ctx.lineWidth = 0.7;
+        ctx.stroke(bracePath);
+        ctx.restore();
+
+        if (spec.hasSpire && layerIndex <= 1 && slot % 3 === 0) {
+          ctx.font = '500 13px "JetBrains Mono", monospace';
+          ctx.fillStyle = strokeCol('accent', alphaLayer * 0.95);
+          ctx.fillText(`BLDG ${Math.round(bh * 1.4)}m`, bx + 2, topY - 18);
+        }
+      }
+
+      // 模式 A 與夜晚窗景線條：建築立面垂直帷幕線與夜間發光窗格
+      if (cyclistStyle !== 'blueprint') {
+        ctx.save();
+        ctx.clip(bldgPath);
+        const facadePath = new Path2D();
+        // 白天極簡垂直帷幕分割線
+        const colStep = Math.max(8, bw * 0.25);
+        for (let cx = bx + colStep; cx < bx + bw - 3; cx += colStep) {
+          facadePath.moveTo(cx, topY + 6);
+          facadePath.lineTo(cx, roadY);
+        }
+        ctx.strokeStyle = strokeCol('faint', alphaLayer * 0.32);
+        ctx.lineWidth = 0.65;
+        ctx.stroke(facadePath);
+
+        // 黃昏與黑夜：點亮幾何建築水平窗帶 (Lit Architectural Windows)
+        if (nightF > 0.18 || duskF > 0.35) {
+          const winAlpha = Math.max(nightF, duskF * 0.7) * alphaLayer * 0.85;
+          const winPath = new Path2D();
+          for (let wy = topY + 12; wy < roadY - 12; wy += 9) {
+            const rowHash = Math.sin(slot * 17.3 + wy * 0.41);
+            if (rowHash > -0.15) {
+              const xStart = bx + 5 + (rowHash > 0.3 ? 0 : bw * 0.25);
+              const xEnd = bx + bw - 5 - (rowHash < 0.2 ? bw * 0.2 : 0);
+              if (xEnd > xStart) {
+                winPath.moveTo(xStart, wy);
+                winPath.lineTo(xEnd, wy);
+              }
+            }
+          }
+          ctx.strokeStyle = strokeCol(nightF > 0.5 ? 'accent' : 'ink', winAlpha);
+          ctx.lineWidth = 1.25;
+          ctx.setLineDash([5, 4]);
+          ctx.stroke(winPath);
+          ctx.setLineDash([]);
+        }
+        ctx.restore();
+      }
+
+      // 描繪大樓外框
+      ctx.strokeStyle = strokeCol(layerIndex === 0 ? 'faint' : 'sub', alphaLayer);
+      ctx.lineWidth = lineW;
+      ctx.stroke(bldgPath);
+
+      // 頂樓避雷針尖塔與夜間航空防撞警示燈 (Rooftop Spire & Night Beacon)
+      if (spec.hasSpire) {
+        const spireX = bx + bw * 0.5;
+        const spireTopY = topY - 16;
+        const spirePath = new Path2D();
+        spirePath.moveTo(spireX, topY);
+        spirePath.lineTo(spireX, spireTopY);
+        ctx.strokeStyle = strokeCol('sub', alphaLayer);
+        ctx.lineWidth = 1.0;
+        ctx.stroke(spirePath);
+
+        if (nightF > 0.2 || duskF > 0.3) {
+          const pulse = 0.5 + 0.5 * Math.sin(time * 0.005 + slot * 1.7);
+          const beacon = new Path2D();
+          beacon.arc(spireX, spireTopY, 1.8 + pulse * 1.8, 0, Math.PI * 2);
+          ctx.strokeStyle = strokeCol('accent', Math.max(nightF, duskF) * pulse * 0.9);
+          ctx.lineWidth = 1.1;
+          ctx.stroke(beacon);
+        }
+      }
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * ============================================================================
+   * 2. 多層次視差風力發電機 (依畫風切換：A雙線塊面 / B塔柱葉片版畫刻線 / C掃掠圓藍圖標註 / D螺旋尾流渦流絲帶)
+   * ============================================================================
+   */
+  function drawWindTurbine(x, baseY, scale, angle, layer) {
+    const towerH = 225 * scale;
+    const bladeLen = 112 * scale;
+    const hubY = baseY - towerH;
+
+    const alphaByLayer = [0.40, 0.68, 0.94][layer];
+    const lineW = Math.max(0.8, [1.0, 1.4, 1.8][layer] * scale);
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // 模式 D【流體風洞動線】：繪製風車葉片尖端與輪轂向後延伸的螺旋尾流渦流軌跡 (Helical Wake Vortex Trails)
+    if (cyclistStyle === 'ribbon') {
+      const wakeLen = (150 + layer * 65) * scale;
+      for (let b = 0; b < 3; b++) {
+        const bladeAngle = angle + (b * Math.PI * 2) / 3;
+        const tipX = x + Math.sin(bladeAngle) * (bladeLen * 0.18);
+        const tipY = hubY - Math.cos(bladeAngle) * bladeLen;
+
+        const vortexPath = new Path2D();
+        vortexPath.moveTo(tipX, tipY);
+        for (let wx = 8; wx <= wakeLen; wx += 10) {
+          const decay = wx / wakeLen;
+          const swirl = Math.sin(wx * 0.065 - angle * 2.5 + b * 2.1) * (10 * scale * (1 - decay * 0.5));
+          vortexPath.lineTo(tipX - wx, tipY + swirl);
+        }
+        ctx.strokeStyle = strokeCol('faint', alphaByLayer * 0.42);
+        ctx.lineWidth = Math.max(0.65, 1.1 * scale);
+        ctx.stroke(vortexPath);
+      }
+    }
+
+    // 模式 C【工程藍圖結構】：繪製風車葉片掃掠面積虛線圓 (Swept Area Circle)、中心軸線與工程標註
+    if (cyclistStyle === 'blueprint') {
+      const sweptCircle = new Path2D();
+      sweptCircle.arc(x, hubY, bladeLen, 0, Math.PI * 2);
+      ctx.strokeStyle = strokeCol('accent', alphaByLayer * 0.48);
+      ctx.lineWidth = 0.85;
+      ctx.setLineDash([5, 4]);
+      ctx.stroke(sweptCircle);
+
+      const axisLines = new Path2D();
+      axisLines.moveTo(x - bladeLen * 1.12, hubY);
+      axisLines.lineTo(x + bladeLen * 1.12, hubY);
+      axisLines.moveTo(x, hubY - bladeLen * 1.12);
+      axisLines.lineTo(x, baseY);
+      ctx.setLineDash([8, 3, 2, 3]);
+      ctx.strokeStyle = strokeCol('faint', alphaByLayer * 0.45);
+      ctx.stroke(axisLines);
+      ctx.setLineDash([]);
+
+      if (layer >= 1) {
+        ctx.font = `500 ${Math.max(13, Math.round(13 * scale))}px "JetBrains Mono", monospace`;
+        ctx.fillStyle = strokeCol('accent', alphaByLayer * 0.9);
+        const rotorDia = Math.round(126 * scale);
+        const rpmVal = (12.5 + currentSpeed * 0.08).toFixed(1);
+        ctx.fillText(`Ø ${rotorDia}m`, x + bladeLen * 0.72, hubY - bladeLen * 0.72);
+        ctx.fillText(`${rpmVal} RPM`, x + 10 * scale, hubY + 14 * scale);
+      }
+    }
+
+    // 1. 錐形塔柱 (Tapered Tower)
+    const bW = 6.5 * scale;
+    const tW = 2.4 * scale;
+    const towerPath = new Path2D();
+    towerPath.moveTo(x - bW, baseY);
+    towerPath.lineTo(x - tW, hubY);
+    towerPath.lineTo(x + tW, hubY);
+    towerPath.lineTo(x + bW, baseY);
+    towerPath.closePath();
+
+    ctx.fillStyle = getBgColor();
+    ctx.strokeStyle = strokeCol(layer === 0 ? 'faint' : 'sub', alphaByLayer);
+    ctx.lineWidth = lineW;
+    ctx.fill(towerPath);
+
+    // 模式 B【版畫排線插畫】：於風車塔柱背光側（左側）使用獨立 Path2D 繪製版畫橫向陰影刻線
+    if (cyclistStyle === 'hatched') {
+      ctx.save();
+      ctx.clip(towerPath);
+      const towerTicks = new Path2D();
+      const stepY = Math.max(3.2, 5.2 * scale);
+      for (let ty = hubY + 4; ty < baseY; ty += stepY) {
+        towerTicks.moveTo(x - bW - 2, ty);
+        towerTicks.lineTo(x + bW * 0.18, ty - 2.5 * scale);
+      }
+      ctx.strokeStyle = strokeCol('sub', alphaByLayer * 0.65);
+      ctx.lineWidth = Math.max(0.65, 0.9 * scale);
+      ctx.stroke(towerTicks);
+      ctx.restore();
+    }
+
+    ctx.stroke(towerPath);
+
+    // 2. 三片旋轉風機葉片
+    for (let i = 0; i < 3; i++) {
+      const a = angle + (i * Math.PI * 2) / 3;
+      ctx.save();
+      ctx.translate(x, hubY);
+      ctx.rotate(a);
+
+      const bladePath = new Path2D();
+      bladePath.moveTo(0, -3 * scale);
+      bladePath.bezierCurveTo(
+        4.2 * scale, -bladeLen * 0.28,
+        3.0 * scale, -bladeLen * 0.75,
+        0.4 * scale, -bladeLen
+      );
+      bladePath.bezierCurveTo(
+        -1.8 * scale, -bladeLen * 0.75,
+        -2.2 * scale, -bladeLen * 0.25,
+        0, -3 * scale
+      );
+      bladePath.closePath();
+
+      ctx.fillStyle = getBgColor();
+      ctx.fill(bladePath);
+
+      // 模式 B：葉片內側版畫短排線
+      if (cyclistStyle === 'hatched' && layer >= 1) {
+        ctx.save();
+        ctx.clip(bladePath);
+        const bladeTicks = new Path2D();
+        for (let by = -8 * scale; by > -bladeLen * 0.85; by -= 4.5 * scale) {
+          bladeTicks.moveTo(-2 * scale, by);
+          bladeTicks.lineTo(1.5 * scale, by - 2 * scale);
+        }
+        ctx.strokeStyle = strokeCol('sub', alphaByLayer * 0.55);
+        ctx.lineWidth = 0.75;
+        ctx.stroke(bladeTicks);
+        ctx.restore();
+      }
+
+      ctx.strokeStyle = strokeCol(layer === 0 ? 'faint' : 'sub', alphaByLayer);
+      ctx.lineWidth = lineW;
+      ctx.stroke(bladePath);
+      ctx.restore();
+    }
+
+    // 3. 輪轂中心 (Hub) 與夜間機艙防撞警示燈 (Night Nacelle Beacon)
+    const hubPath = new Path2D();
+    hubPath.arc(x, hubY, 4.2 * scale, 0, Math.PI * 2);
+    ctx.fillStyle = getBgColor();
+    ctx.fill(hubPath);
+    ctx.stroke(hubPath);
+
+    if (currentPalette.nightFactor > 0.2 || currentPalette.duskFactor > 0.35) {
+      const beaconPulse = 0.5 + 0.5 * Math.sin(angle * 3.0 + layer);
+      const beaconRing = new Path2D();
+      beaconRing.arc(x, hubY - 5 * scale, (3.5 + beaconPulse * 4.5) * scale, 0, Math.PI * 2);
+      ctx.strokeStyle = strokeCol('accent', Math.max(currentPalette.nightFactor, currentPalette.duskFactor) * beaconPulse * 0.75);
+      ctx.lineWidth = 1.0;
+      ctx.stroke(beaconRing);
     }
 
     ctx.restore();
@@ -1470,16 +2179,114 @@ export function mountAero(canvas, opts = {}) {
   }
 
   /**
+   * 黃昏與黑夜專屬：彎把公路車破風頭燈光束與尾燈 (Synchronized across Styles A / B / C / D)
+   */
+  function drawCyclistNightLights(styleMode, time) {
+    const nightStrength = Math.max(currentPalette.nightFactor, currentPalette.duskFactor * 0.75);
+    if (nightStrength <= 0.12) return;
+
+    const headLampX = 83, headLampY = -105; // 彎把下方破風碼表延伸座車燈位置
+    const tailLampX = -48, tailLampY = -104; // 座管後方尾燈位置
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // 1. 頭燈光束 (Front Headlight Beam)
+    const beamCone = new Path2D();
+    beamCone.moveTo(headLampX, headLampY);
+    beamCone.lineTo(headLampX + 265, -24);
+    beamCone.lineTo(headLampX + 285, 2);
+    beamCone.lineTo(headLampX + 115, 2);
+    beamCone.closePath();
+
+    if (styleMode === 'sculpted') {
+      // 模式 A：柔和幾何光束輪廓與地面橢圓光斑
+      ctx.strokeStyle = strokeCol('accent', nightStrength * 0.55);
+      ctx.lineWidth = 1.2;
+      ctx.stroke(beamCone);
+
+      const innerBeam = new Path2D();
+      innerBeam.moveTo(headLampX, headLampY);
+      innerBeam.lineTo(headLampX + 230, -10);
+      ctx.strokeStyle = strokeCol('ink', nightStrength * 0.35);
+      ctx.lineWidth = 0.85;
+      ctx.stroke(innerBeam);
+    } else if (styleMode === 'hatched') {
+      // 模式 B：獨立 Path2D 裁切之版畫斜線光束 (絕不外溢)
+      drawHatchingInPath(beamCone, headLampX, headLampX + 290, headLampY - 5, 5, 6.0, nightStrength * 0.45);
+      ctx.strokeStyle = strokeCol('sub', nightStrength * 0.5);
+      ctx.lineWidth = 1.0;
+      ctx.stroke(beamCone);
+    } else if (styleMode === 'blueprint') {
+      // 模式 C：CAD 光學照度錐與距離標尺
+      ctx.strokeStyle = strokeCol('accent', nightStrength * 0.75);
+      ctx.lineWidth = 0.95;
+      ctx.setLineDash([5, 4]);
+      ctx.stroke(beamCone);
+      ctx.setLineDash([]);
+
+      for (let r = 70; r <= 210; r += 70) {
+        const arcRing = new Path2D();
+        arcRing.arc(headLampX, headLampY, r, 0.22, 0.54);
+        ctx.strokeStyle = strokeCol('accent', nightStrength * 0.5);
+        ctx.stroke(arcRing);
+      }
+      ctx.font = `500 ${(13 / riderScale).toFixed(2)}px "JetBrains Mono", monospace`;
+      ctx.fillStyle = strokeCol('accent', nightStrength * 0.95);
+      ctx.fillText('850 LM · FOV 16°', headLampX + 68, headLampY + 18);
+    } else if (styleMode === 'ribbon') {
+      // 模式 D：流體光子波紋絲帶
+      for (let i = 0; i < 4; i++) {
+        const waveRibbon = new Path2D();
+        waveRibbon.moveTo(headLampX, headLampY);
+        const targetY = -20 + i * 7;
+        const waveOffset = Math.sin(time * 0.008 + i) * 6;
+        waveRibbon.quadraticCurveTo(headLampX + 120, headLampY + 35 + waveOffset, headLampX + 250 - i * 20, targetY);
+        ctx.strokeStyle = strokeCol(i === 0 ? 'accent' : 'sub', nightStrength * (0.72 - i * 0.14));
+        ctx.lineWidth = 1.6 - i * 0.25;
+        ctx.stroke(waveRibbon);
+      }
+    }
+
+    // 頭燈燈頭亮點
+    const lampDot = new Path2D();
+    lampDot.arc(headLampX, headLampY, 3.2, 0, Math.PI * 2);
+    ctx.fillStyle = strokeCol('ink', nightStrength * 0.95);
+    ctx.fill(lampDot);
+
+    // 2. 座管尾燈脈衝光圈与拖尾光跡 (Rear Taillight Pulse & Trail)
+    const pulse = 0.5 + 0.5 * Math.sin(time * 0.01);
+    const tailTrail = new Path2D();
+    tailTrail.moveTo(tailLampX, tailLampY);
+    tailTrail.lineTo(tailLampX - 58 - pulse * 25, tailLampY);
+    ctx.strokeStyle = strokeCol('accent', nightStrength * 0.75);
+    ctx.lineWidth = 2.0;
+    ctx.stroke(tailTrail);
+
+    const tailRing = new Path2D();
+    tailRing.arc(tailLampX, tailLampY, 3.0 + pulse * 3.5, 0, Math.PI * 2);
+    ctx.strokeStyle = strokeCol('accent', nightStrength * 0.85);
+    ctx.lineWidth = 1.2;
+    ctx.stroke(tailRing);
+
+    ctx.restore();
+  }
+
+  /**
    * 整合繪製騎士與彎把公路車主函式
    */
   function drawMasterCyclist(cx, cy, scale, time) {
-      riderScale = scale;
+    riderScale = scale;
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(scale, scale);
 
     const bounce = Math.sin(pedalPhase * 2) * 1.1;
     ctx.translate(0, bounce);
+
+    // 黃昏與夜間車燈光束（繪製於車輛底層）
+    drawCyclistNightLights(cyclistStyle, time);
 
     const wheelR = 46;
     const rimDepth = 9.5;
@@ -1673,6 +2480,9 @@ export function mountAero(canvas, opts = {}) {
     const dt = Math.min((now - lastTime) / 1000, 0.1);
     lastTime = now;
 
+    // 更新日夜循環調色盤與 24h 時間
+    updateDayNightPalette(dt);
+
     const w = VW;
     const h = VH;
     const roadY = h - Math.min(54, h * 0.2);
@@ -1700,29 +2510,48 @@ export function mountAero(canvas, opts = {}) {
     const cyclistX = w < 768 ? w * 0.5 : Math.min(w * 0.34, 460);
     const cyclistScale = Math.min(Math.max(0.82, Math.min(1.22, w / 1150)), (roadY - h * 0.2) / 205);
 
-    // 景深第 0 層：天空背景與全局環境層（CAD 正交網格 / 版畫天空微風 / CFD 風洞層流線）
-    drawSkyAndEnvironmentBackdrop(w, h, roadY, cyclistX, now);
+    // 景深第 0 層：日夜天體運行（太陽/弦月/星座）與全局環境層（CAD 正交網格 / 版畫天空微風 / CFD 風洞層流線）
+    drawCelestialAndSky(w, h, roadY, cyclistX, now);
 
-    // 景深第 1 層：遠山山稜線 + 遠景風車
-    drawMountainLayer(w, roadY, 175, 0, ridgeOffsets[0]);
+    // 景深第 1 層（遠景）：依場景模式繪製遠山或遠景摩天大樓群 + 遠景風車
+    if (sceneMode === 'mountain' || sceneMode === 'hybrid') {
+      drawMountainLayer(w, roadY, 175, 0, ridgeOffsets[0]);
+    }
+    if (sceneMode === 'city') {
+      drawCitySkylineLayer(w, roadY, 0, ridgeOffsets[0], now);
+    }
     turbines.filter(t => t.layer === 0).forEach(t => {
       const span = w * 1.25;
       const x = ((t.xRatio * span - ridgeOffsets[0] * 1.15) % span + span) % span - w * 0.12;
-      const ridgeY = (roadY - 175) + getRidgeElevation(x + ridgeOffsets[0], 0);
+      const ridgeY = sceneMode === 'city'
+        ? roadY - 110
+        : (roadY - 175) + getRidgeElevation(x + ridgeOffsets[0], 0);
       drawWindTurbine(x, ridgeY + 18, t.scale, t.angle, 0);
     });
 
-    // 景深第 2 層：中山山稜線 + 中景風車
-    drawMountainLayer(w, roadY, 105, 1, ridgeOffsets[1]);
+    // 景深第 2 層（中景）：山稜 + 城市天際線（於山城混合或純城市模式顯示）+ 中景風車
+    if (sceneMode === 'mountain' || sceneMode === 'hybrid') {
+      drawMountainLayer(w, roadY, 105, 1, ridgeOffsets[1]);
+    }
+    if (sceneMode === 'city' || sceneMode === 'hybrid') {
+      drawCitySkylineLayer(w, roadY, 1, ridgeOffsets[1], now);
+    }
     turbines.filter(t => t.layer === 1).forEach(t => {
       const span = w * 1.3;
       const x = ((t.xRatio * span - ridgeOffsets[1] * 1.2) % span + span) % span - w * 0.15;
-      const ridgeY = (roadY - 105) + getRidgeElevation(x + ridgeOffsets[1], 1);
+      const ridgeY = sceneMode === 'city'
+        ? roadY - 60
+        : (roadY - 105) + getRidgeElevation(x + ridgeOffsets[1], 1);
       drawWindTurbine(x, ridgeY + 25, t.scale, t.angle, 1);
     });
 
-    // 景深第 3 層：近景海岸丘陵 + 近景大型風車
-    drawMountainLayer(w, roadY, 42, 2, ridgeOffsets[2]);
+    // 景深第 3 層（近景）：近景海岸丘陵 / 近景城市建築與斜張橋 + 大型近景風車
+    if (sceneMode === 'mountain' || sceneMode === 'hybrid') {
+      drawMountainLayer(w, roadY, 42, 2, ridgeOffsets[2]);
+    }
+    if (sceneMode === 'city' || sceneMode === 'hybrid') {
+      drawCitySkylineLayer(w, roadY, 2, ridgeOffsets[2], now);
+    }
     turbines.filter(t => t.layer === 2).forEach(t => {
       const span = w * 1.4;
       const x = ((t.xRatio * span - ridgeOffsets[2] * 1.45) % span + span) % span - w * 0.2;
@@ -1732,7 +2561,7 @@ export function mountAero(canvas, opts = {}) {
     // 景深第 4 層：公路與氣流絲線
     drawRoadAndStreamlines(w, h, roadY);
 
-    // 景深第 5 層：彎把公路車與騎士
+    // 景深第 5 層：彎把公路車與騎士（含夜間自動頭尾燈）
     drawMasterCyclist(cyclistX, roadY, cyclistScale, now);
 
     if (running) raf = requestAnimationFrame(animate);
@@ -1743,16 +2572,23 @@ export function mountAero(canvas, opts = {}) {
   const ro = new ResizeObserver(() => { resizeCanvas(); if (!running) drawStill(); });
   ro.observe(canvas);
   function drawStill() { running = false; lastTime = performance.now(); animate(lastTime); }
-  const api = {
+  const TIME = { day: 10.5, dusk: 17.6, night: 22.5 };
+  return {
     play() { if (running) return; running = true; lastTime = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(animate); },
     pause() { running = false; cancelAnimationFrame(raf); },
-    still() { cancelAnimationFrame(raf); drawStill(); },
+    still() {
+      cancelAnimationFrame(raf);
+      if (dayNightMode !== 'auto') timeOfDay = targetTimeOfDay;
+      drawStill();
+    },
     set(o) {
       if (o.style) cyclistStyle = o.style;
+      if (o.scene) sceneMode = o.scene;
+      if (o.time) { dayNightMode = o.time; if (TIME[o.time]) targetTimeOfDay = TIME[o.time]; }
       if (o.opacity != null) lineOpacity = o.opacity;
       if (o.speed != null) targetSpeed = o.speed;
-      if (!running) drawStill();
+      if (!running) this.still();
     },
+    get state() { return { style: cyclistStyle, scene: sceneMode, time: dayNightMode, timeOfDay }; },
   };
-  return api;
 }
