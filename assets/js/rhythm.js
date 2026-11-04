@@ -64,9 +64,10 @@ export function splitByPeriod(sun, t0, t1) {
   return out;
 }
 
-const W = 1200; const L = 104; const R = 150; const ROW = 46; const TOP = 34; const BH = 12;
+const W = 1200; const R = 150; const ROW = 46; const TOP = 34; const BH = 12;
 
-function buildSvg(items, mode) {
+function buildSvg(items, mode, picked) {
+  const multi = items.length > 1; const L = multi ? 150 : 104; // 多趟時每列前面多一個勾選框
   const starts = items.map(({ a }) => a.start).filter((v) => v != null);
   const ends = items.map(({ a }) => a.end).filter((v) => v != null);
   const maxKm = Math.max(...items.map(({ a }) => a.km || 0));
@@ -132,8 +133,9 @@ function buildSvg(items, mode) {
     return `<g class="row" data-row="${ride.no}">
       <rect class="row__hit" x="0" y="${y - 15}" width="${W}" height="${ROW - 2}" rx="10"/>
       ${bg}
-      <a href="#/ride/${ride.no}"><text class="lbl" x="28" y="${y + 11}">${ordinal(ride.no)} <tspan class="tot" dx="2">${ride.date.slice(0, 4)}</tspan></text></a>
-      <g class="play1" data-play="${ride.no}" role="button" tabindex="0" aria-label="播放 ${ordinal(ride.no)}"><title>只播放 ${ordinal(ride.no)}／暫停</title><circle cx="11" cy="${y + 6}" r="11"/><path class="ic-play" d="M8 ${y + 1} L15.5 ${y + 6} L8 ${y + 11}Z"/><path class="ic-pause" d="M6.5 ${y + 1.5}h3v9h-3zM12.5 ${y + 1.5}h3v9h-3z"/></g>
+      ${multi ? `<g class="pick1${picked.has(ride.no) ? ' is-on' : ''}" data-pick="${ride.no}" role="checkbox" tabindex="0" aria-checked="${picked.has(ride.no)}" aria-label="勾選 ${ordinal(ride.no)} 一起播放"><title>勾選後按上方「播放」一起比較</title><rect x="0" y="${y - 5}" width="22" height="22" rx="6"/><path d="M5.5 ${y + 6} l4 4 l7 -8" /></g>` : ''}
+      <a href="#/ride/${ride.no}"><text class="lbl" x="${multi ? 66 : 28}" y="${y + 11}">${ordinal(ride.no)} <tspan class="tot" dx="2">${ride.date.slice(0, 4)}</tspan></text></a>
+      <g class="play1" data-play="${ride.no}" role="button" tabindex="0" aria-label="播放 ${ordinal(ride.no)}"><title>只播放 ${ordinal(ride.no)}／暫停</title><g transform="translate(${multi ? 32 : 0},0)"><circle cx="11" cy="${y + 6}" r="11"/><path class="ic-play" d="M8 ${y + 1} L15.5 ${y + 6} L8 ${y + 11}Z"/><path class="ic-pause" d="M6.5 ${y + 1.5}h3v9h-3zM12.5 ${y + 1.5}h3v9h-3z"/></g></g>
       ${bars}
       <text class="tot" data-readout="${ride.no}" x="${endX + 10}" y="${y + 11}">${mode === 'time' ? fmtDur(a.total) : `${fmtKm(a.km)} km`}</text>
       <g class="rider" data-rider="${ride.no}" style="display:none"><text class="rider__icon" transform="scale(-1,1)" x="0" y="0" text-anchor="middle">🚴</text></g>
@@ -143,7 +145,7 @@ function buildSvg(items, mode) {
 }
 
 /* 掛到容器上。items: [{ride,a}]；onTick(positions) 讓地圖跟著動 */
-export function mountRhythm(el, items, { onTick } = {}) {
+export function mountRhythm(el, items, { onTick, onState } = {}) {
   if (!items.some(({ a }) => a.start != null)) { el.innerHTML = ''; return; }
   let mode = 'km'; const picked = new Set(items.map(({ ride }) => ride.no)); let geo; let playing = null; let raf = 0; let elapsed = 0; let speed = 1; let last = 0;
   const maxTotal = Math.max(...items.map(({ a }) => a.total || 0));
@@ -164,7 +166,7 @@ export function mountRhythm(el, items, { onTick } = {}) {
         <span class="clock num" data-clock></span>
       </div>
     </div>
-    ${items.length > 1 ? `<div class="picks" role="group" aria-label="選擇要比較的場次"><span class="picks__label">播放哪幾趟</span>${items.map(({ ride }) => `<button type="button" class="key" data-pick="${ride.no}" aria-pressed="true"><i style="background:${rideColor(ride.no)}"></i>${ordinal(ride.no)} ${ride.date.slice(0, 4)}</button>`).join('')}<button type="button" class="linkish" data-pick-all>全選</button><button type="button" class="linkish" data-pick-none>清除</button></div>` : ''}
+    ${items.length > 1 ? '<p class="picks-hint">在左邊<b>勾選</b>想比較的幾趟，再按「播放」一起騎；或按某一趟的 ▶ 只看那一趟。<button type="button" class="linkish" data-pick-toggle>全部取消</button></p>' : ''}
     <div class="strip__svg" data-svg></div>
     <div class="legend" data-legend></div>
   </div>`;
@@ -178,7 +180,7 @@ export function mountRhythm(el, items, { onTick } = {}) {
       : `${periodKeys}<span><i class="dot"></i>休息站（圓越大停越久）</span>${inc}`;
   }
   function draw() {
-    geo = buildSvg(items, mode); svgBox.innerHTML = geo.svg; legend();
+    geo = buildSvg(items, mode, picked); svgBox.innerHTML = geo.svg; legend();
     svgBox.querySelectorAll('[data-play]').forEach((b) => {
       // 這一趟正在播：按了就暫停／繼續；否則只播放這一趟
       const go = () => { const n = Number(b.dataset.play); if (playing && playing.includes(n) && !finished) togglePause(); else start([n]); };
@@ -212,6 +214,7 @@ export function mountRhythm(el, items, { onTick } = {}) {
     });
     el.querySelector('[data-clock]').textContent = playing ? `出發後 ${fmtDur(elapsed)}` : '';
     if (onTick) onTick(playing ? pos : null);
+    if (onState && playing) emit();
   }
   function frame(ts) {
     if (!el.isConnected) return;
@@ -223,7 +226,16 @@ export function mountRhythm(el, items, { onTick } = {}) {
   }
   let paused = false; let finished = false;
   const pauseBtn = el.querySelector('[data-pause]');
-  const setPaused = (v) => { paused = v; pauseBtn.textContent = v ? '▶ 繼續' : '❚❚ 暫停'; pauseBtn.setAttribute('aria-pressed', String(v)); if (playing) paint(); };
+  let syncPicks = () => {};
+  const playLabel = () => (items.length === 1 ? '▶ 播放' : !picked.size ? '▶ 先勾選場次' : picked.size === items.length ? '▶ 全部一起播放' : `▶ 播放勾選的 ${picked.size} 趟`);
+  /* 目前的播放狀態，給地圖上的播放鈕同步 */
+  function emit() {
+    playBtn.textContent = playLabel(); playBtn.disabled = !picked.size;
+    if (onState) onState({ label: playLabel(), canPlay: picked.size > 0, nos: playing ? [...playing] : [], playing: !!playing && !finished, paused, finished, clock: el.querySelector('[data-clock]').textContent });
+  }
+  function togglePick(n) { if (picked.has(n)) picked.delete(n); else picked.add(n); syncPicks(); }
+  function playPicked() { if (picked.size) start(items.map(({ ride }) => ride.no).filter((n) => picked.has(n))); }
+  const setPaused = (v) => { paused = v; pauseBtn.textContent = v ? '▶ 繼續' : '❚❚ 暫停'; pauseBtn.setAttribute('aria-pressed', String(v)); if (playing) paint(); emit(); };
   function start(nos) {
     cancelAnimationFrame(raf); playing = nos; elapsed = 0; last = 0; finished = false;
     el.querySelector('[data-stop]').hidden = false; pauseBtn.hidden = false; setPaused(false);
@@ -233,11 +245,11 @@ export function mountRhythm(el, items, { onTick } = {}) {
     if (!playing) return;
     if (paused) { setPaused(false); last = 0; raf = requestAnimationFrame(frame); } else { setPaused(true); cancelAnimationFrame(raf); }
   }
-  function finish() { cancelAnimationFrame(raf); finished = true; paint(); pauseBtn.hidden = true; el.querySelector('[data-stop]').textContent = '✕ 清除'; }
+  function finish() { cancelAnimationFrame(raf); finished = true; paint(); pauseBtn.hidden = true; el.querySelector('[data-stop]').textContent = '✕ 清除'; emit(); }
   function stop() {
     cancelAnimationFrame(raf); playing = null; elapsed = 0; finished = false; setPaused(false); pauseBtn.hidden = true;
     const b = el.querySelector('[data-stop]'); b.hidden = true; b.textContent = '■ 停止';
-    paint();
+    paint(); emit();
   }
 
   const segInk = () => { const on = el.querySelector('[data-mode][aria-pressed="true"]'); const ink = el.querySelector('.segctl__ink'); if (on && ink) { ink.style.width = `${on.offsetWidth}px`; ink.style.transform = `translateX(${on.offsetLeft}px)`; } };
@@ -248,21 +260,20 @@ export function mountRhythm(el, items, { onTick } = {}) {
   }));
   requestAnimationFrame(segInk); if (document.fonts) document.fonts.ready.then(segInk);
   const playBtn = el.querySelector('[data-playall]');
-  const syncPicks = () => {
-    el.querySelectorAll('[data-pick]').forEach((b) => b.setAttribute('aria-pressed', String(picked.has(Number(b.dataset.pick)))));
-    playBtn.disabled = !picked.size;
-    if (items.length > 1) playBtn.textContent = picked.size === items.length ? '▶ 全部播放比較' : picked.size ? `▶ 播放所選 ${picked.size} 趟` : '▶ 先選場次';
+  syncPicks = () => {
+    svgBox.querySelectorAll('[data-pick]').forEach((b) => { const on = picked.has(Number(b.dataset.pick)); b.classList.toggle('is-on', on); b.setAttribute('aria-checked', String(on)); });
+    const tg = el.querySelector('[data-pick-toggle]'); if (tg) tg.textContent = picked.size === items.length ? '全部取消' : '全選';
+    emit();
   };
-  el.querySelectorAll('[data-pick]').forEach((b) => b.addEventListener('click', () => {
-    const n = Number(b.dataset.pick); if (picked.has(n)) picked.delete(n); else picked.add(n); syncPicks();
-  }));
-  el.querySelector('[data-pick-all]')?.addEventListener('click', () => { items.forEach(({ ride }) => picked.add(ride.no)); syncPicks(); });
-  el.querySelector('[data-pick-none]')?.addEventListener('click', () => { picked.clear(); syncPicks(); });
-  syncPicks();
-  playBtn.addEventListener('click', () => { if (picked.size) start(items.map(({ ride }) => ride.no).filter((n) => picked.has(n))); });
+  svgBox.addEventListener('click', (e) => { const b = e.target.closest('[data-pick]'); if (b) togglePick(Number(b.dataset.pick)); });
+  svgBox.addEventListener('keydown', (e) => { const b = e.target.closest('[data-pick]'); if (b && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); togglePick(Number(b.dataset.pick)); } });
+  el.querySelector('[data-pick-toggle]')?.addEventListener('click', () => { if (picked.size === items.length) picked.clear(); else items.forEach(({ ride }) => picked.add(ride.no)); syncPicks(); });
+  playBtn.addEventListener('click', playPicked);
   el.querySelector('[data-stop]').addEventListener('click', stop);
   pauseBtn.addEventListener('click', togglePause);
   el.querySelector('[data-speed]').addEventListener('change', (e) => { speed = Number(e.target.value); });
-  draw();
-  return { stop };
+  draw(); syncPicks();
+  /* 只播放某一趟；正在播的就是這一趟時改成暫停／繼續 */
+  function playOne(n) { if (playing && playing.length === 1 && playing[0] === n && !finished) togglePause(); else start([n]); }
+  return { stop, togglePause, playPicked, playOne };
 }

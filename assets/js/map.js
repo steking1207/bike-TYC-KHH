@@ -2,6 +2,7 @@
 import { esc, ordinal } from './ride.js';
 import { rideColor } from './rhythm.js';
 import { loadTrack, trackAt } from './track.js';
+import { mountWeather } from './weather.js';
 
 const LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/';
 let loading;
@@ -21,12 +22,39 @@ function loadLeaflet() {
 const ll = (p) => (p && Number.isFinite(p.lat) && Number.isFinite(p.lon) ? [p.lat, p.lon] : null);
 
 /* items: [{ride,a}]，placesById；回傳 { update(positions|null) } */
-export function mountMap(el, items, placesById) {
+export function mountMap(el, items, placesById, { player } = {}) {
   const api = { update() {} };
-  el.innerHTML = `<div class="map"><div class="map__canvas" data-map role="region" aria-label="路線地圖"><p class="muted map__msg">地圖載入中…</p></div>
+  el.innerHTML = `<div class="map">${player ? `<div class="map__play">
+      ${items.length > 1 ? `<div class="map__ones" role="group" aria-label="單獨播放某一趟">${items.map(({ ride }) => `<button type="button" class="one" data-mp-one="${ride.no}" style="--c:${rideColor(ride.no)}" title="只播放 ${ordinal(ride.no)}（${ride.date}）"><span class="one__ic" aria-hidden="true">▶</span>${ordinal(ride.no)}</button>`).join('')}</div>` : ''}
+      <button type="button" class="btn btn--sm btn--go" data-mp-play>▶ 播放</button>
+      <button type="button" class="btn btn--sm" data-mp-stop hidden>■ 停止</button>
+      <span class="clock num" data-mp-clock></span>
+      <span class="map__play-note" data-mp-note hidden>多趟一起播放時不顯示天氣</span>
+    </div>` : ''}<div class="map__canvas" data-map role="region" aria-label="路線地圖"><p class="muted map__msg">地圖載入中…</p></div>
     ${items.length > 1 ? `<div class="map__keys">${items.map(({ ride }) => `<button type="button" class="key" data-key="${ride.no}" aria-pressed="true"><i style="background:${rideColor(ride.no)}"></i>${ordinal(ride.no)} ${ride.date.slice(0, 4)}</button>`).join('')}</div>` : ''}
     <p class="muted map__note" data-map-note hidden>沒有 GPS 軌跡的場次，以休息站之間的直線表示。</p></div>`;
   const box = el.querySelector('[data-map]');
+
+  // 播放鈕：和節奏區塊共用同一個播放器
+  let ps = { playing: false };
+  const mpPlay = el.querySelector('[data-mp-play]'); const mpStop = el.querySelector('[data-mp-stop]');
+  mpPlay?.addEventListener('click', () => { if (ps.playing) player.togglePause(); else player.playPicked(); });
+  mpStop?.addEventListener('click', () => player.stop());
+  el.querySelectorAll('[data-mp-one]').forEach((b) => b.addEventListener('click', () => player.playOne(Number(b.dataset.mpOne))));
+  function setPlayState(st) {
+    ps = st; if (!mpPlay) return;
+    mpPlay.textContent = st.playing ? (st.paused ? '▶ 繼續' : '❚❚ 暫停') : st.label;
+    mpPlay.disabled = !st.playing && !st.canPlay;
+    mpPlay.classList.toggle('btn--go', !st.playing || st.paused);
+    mpStop.hidden = !st.playing && !st.finished; mpStop.textContent = st.finished ? '✕ 清除' : '■ 停止';
+    el.querySelectorAll('[data-mp-one]').forEach((b) => {
+      const solo = st.nos && st.nos.length === 1 && st.nos[0] === Number(b.dataset.mpOne) && (st.playing || st.finished);
+      const run = solo && st.playing && !st.paused;
+      b.setAttribute('aria-pressed', String(solo)); b.querySelector('.one__ic').textContent = run ? '❚❚' : '▶';
+      b.title = `${run ? '暫停' : '只播放'} ${ordinal(Number(b.dataset.mpOne))}`;
+    });
+    el.querySelector('[data-mp-clock]').textContent = st.playing || st.finished ? st.clock : '';
+  }
 
   Promise.all([loadLeaflet(), Promise.all(items.map(({ ride }) => loadTrack(ride.date)))]).then(([L, trks]) => {
     const trackOf = Object.fromEntries(items.map(({ ride }, i) => [ride.no, trks[i]]));
@@ -62,6 +90,9 @@ export function mountMap(el, items, placesById) {
     });
     if (bounds.length) map.fitBounds(bounds, { padding: [24, 24] }); else map.setView([23.9, 120.6], 8);
 
+    // 當日天氣圖層（風場、降雨），播放時跟著時間變化
+    const weather = mountWeather(L, map, map.getContainer(), items, trackOf);
+
     el.querySelectorAll('[data-key]').forEach((b) => b.addEventListener('click', () => {
       const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', String(on));
       const line = lines[b.dataset.key]; if (line) { if (on) line.addTo(map); else line.remove(); }
@@ -88,7 +119,9 @@ export function mountMap(el, items, placesById) {
         } else riders[ride.no].setLatLng(at);
       });
       Object.keys(riders).forEach((no) => { if (!live.has(Number(no))) { riders[no].remove(); delete riders[no]; } });
+      const note = el.querySelector('[data-mp-note]'); if (note) note.hidden = !(positions && positions.length > 1);
+      weather.update(positions, (no) => { const r = riders[no]; if (!r) return null; const p = r.getLatLng(); return [p.lat, p.lng]; });
     };
   }).catch((err) => { box.innerHTML = `<p class="muted map__msg">${esc(err.message)}</p>`; });
-  return { update: (p) => api.update(p) };
+  return { update: (p) => api.update(p), setPlayState };
 }

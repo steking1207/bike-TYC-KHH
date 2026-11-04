@@ -115,7 +115,7 @@ code { font-family: var(--mono); font-size: max(13px, .9em); background: var(--p
 @keyframes underline { from { transform: scaleX(0); } }
 .hero__lede { margin: clamp(22px, 3vw, 36px) 0 0; font-size: clamp(16px, 1.5vw, 19px); line-height: 1.75; color: var(--ink-2); max-width: 30em; }
 .hero__lede b { color: var(--ink); font-weight: 700; }
-.hero__stats { margin: clamp(32px, 4vw, 56px) 0 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--ink); }
+.hero__stats { margin: clamp(32px, 4vw, 56px) 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--ink); }
 .hero__stats div { padding: 16px 16px 0 0; }
 .hero__stats div + div { padding-left: 16px; border-left: 1px solid var(--line); }
 .hero__stats dt { font-size: 13px; color: var(--muted); order: 2; }
@@ -200,6 +200,17 @@ code { font-family: var(--mono); font-size: max(13px, .9em); background: var(--p
 .strip .play1.is-playing path { fill: #fff; }
 .strip .row { transition: opacity .3s; }
 .strip .row.is-dim { opacity: .25; }
+/* 每列前面的勾選框：勾了才會被「播放」一起比較 */
+.strip .pick1 { cursor: pointer; }
+.strip .pick1 rect { fill: var(--panel); stroke: var(--line-strong); stroke-width: 1.5; transition: fill .15s, stroke .15s; }
+.strip .pick1 path { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+.strip .pick1.is-on rect { fill: var(--ink); stroke: var(--ink); }
+.strip .pick1.is-on path { opacity: 1; }
+.strip .pick1:hover rect, .strip .pick1:focus-visible rect { stroke: var(--accent); }
+.strip .pick1:focus { outline: none; }
+.picks-hint { margin: 2px 0 10px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+.picks-hint b { color: var(--ink); }
+.picks-hint .linkish { margin-left: 6px; padding: 2px 4px; }
 .strip .row__hit { fill: transparent; }
 .strip .row:hover .row__hit { fill: rgba(11,15,26,.035); }
 .strip .rider__icon { font-size: 22px; }
@@ -217,6 +228,14 @@ code { font-family: var(--mono); font-size: max(13px, .9em); background: var(--p
 .map__canvas { height: 600px; border-radius: 16px; overflow: hidden; background: #EBEBE7; display: grid; place-items: center; }
 .map__canvas.leaflet-container { display: block; font: 13px/1.4 var(--sans); background: #EBEBE7; }
 .map__msg { margin: 0; }
+.map__play { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px 4px 12px; }
+.map__ones { display: flex; flex-wrap: wrap; gap: 6px; padding-right: 8px; margin-right: 2px; border-right: 1px solid var(--line); }
+.one { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px 0 6px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--ink); font: 600 14px/1 var(--sans); cursor: pointer; transition: border-color .15s, background .15s; }
+.one__ic { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--c); color: #fff; font-size: 13px; }
+.one:hover { border-color: var(--c); }
+.one[aria-pressed="true"] { border-color: var(--c); background: color-mix(in srgb, var(--c) 12%, var(--panel)); }
+@media (max-width: 640px) { .map__ones { border-right: 0; padding-right: 0; width: 100%; } }
+.map__play-note { font-size: 13px; color: var(--muted); }
 .map__keys { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 8px 6px; }
 .map__note { font-size: 13px; margin: 4px 8px 6px; }
 .map-rider { position: relative; }
@@ -391,7 +410,7 @@ table.cmp { border-collapse: separate; border-spacing: 0; font-size: 14px; min-w
   .nav a { padding: 7px 13px; }
   .hero__title { font-size: 31vw; line-height: 1; }
   .hero__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .hero__stats div:nth-child(3) { padding-left: 0; border-left: 0; }
+  .hero__stats div:nth-child(3) { padding-left: 0; border-left: 0; grid-column: 1 / -1; }
   .hero__stats div:nth-child(n+3) { border-top: 1px solid var(--line); margin-top: 12px; }
   .route { height: 460px; }
   .sec__head { grid-template-columns: minmax(0, 1fr); }
@@ -436,4 +455,53 @@ table.cmp { border-collapse: separate; border-spacing: 0; font-size: 14px; min-w
   .cmp tr.sum td, .cmp tr.sum .loc { background: #fff; color: var(--ink); }
   body { background: #fff; }
   .rv { opacity: 1; transform: none; }
+}
+
+/* ───────── 天氣圖層（assets/js/weather.js） ───────── */
+.leaflet-weather-pane canvas, .wx-field, .wx-flow { position: absolute; left: 0; top: 0; pointer-events: none; }
+.wx-field { transition: opacity .25s; }
+.wx { position: absolute; inset: 0; z-index: 800; pointer-events: none; font: 13px/1.4 var(--sans); color: var(--ink); }
+.wx > * { pointer-events: auto; }
+.wx__bar { position: absolute; top: 12px; right: 12px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: calc(100% - 80px); }
+.wx__layers { display: inline-flex; background: rgba(255,255,255,.94); border-radius: 999px; box-shadow: var(--shadow); padding: 3px; }
+.wx__layers button { border: 0; background: transparent; font: 600 13px/1 var(--sans); color: var(--ink-2); padding: 8px 12px; border-radius: 999px; cursor: pointer; transition: background .2s, color .2s; }
+.wx__layers button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.wx__day { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.94); border-radius: 999px; box-shadow: var(--shadow); padding: 4px 6px 4px 14px; font-weight: 600; }
+.wx__day select { font: 500 13px/1.2 var(--sans); border: 1px solid var(--line-strong); border-radius: 999px; padding: 5px 8px; background: #fff; color: var(--ink); }
+.wx__panel { position: absolute; left: 12px; bottom: 30px; width: min(380px, calc(100% - 24px)); background: rgba(255,255,255,.94); border-radius: 16px; box-shadow: var(--shadow); padding: 10px 14px; display: grid; gap: 6px; }
+.wx__time { display: flex; align-items: center; gap: 12px; }
+.wx__clock { font: 800 20px/1 var(--sans); letter-spacing: -.01em; min-width: 3.2em; }
+.wx__time input { flex: 1; accent-color: var(--accent); min-width: 0; }
+.wx.is-live .wx__time input { opacity: .55; }
+.wx.is-live .wx__clock { color: var(--accent-ink); }
+.wx__here { margin: 0; color: var(--ink-2); }
+.wx__here:empty { display: none; }
+.wx__here em { font-style: normal; font-weight: 700; }
+.wx__here .is-head { color: var(--warn); }
+.wx__here .is-tail { color: var(--good); }
+.wx__legend { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 10px; }
+.wx__legend:empty { display: none; }
+.wx__unit { font-weight: 600; white-space: nowrap; }
+.wx__ramp { display: grid; gap: 2px; }
+.wx__ramp i { display: block; height: 8px; border-radius: 999px; }
+.wx__ramp span { display: flex; justify-content: space-between; color: var(--muted); font-variant-numeric: tabular-nums; }
+.wx__ramp b { font-weight: 500; min-width: 0; }
+.wx__msg { margin: 0; color: var(--muted); }
+.wx.is-empty .wx__legend, .wx.is-empty .wx__time, .wx.is-off .wx__legend { display: none; }
+@media (max-width: 640px) {
+  .wx__bar { top: 10px; right: 10px; }
+  .wx__panel { left: 8px; bottom: 46px; width: calc(100% - 16px); padding: 8px 12px; gap: 4px; }
+  .wx__clock { font-size: 17px; }
+  .wx__layers button { padding: 8px 10px; }
+}
+
+/* 手機單次頁：播放時畫面底部的目前位置列（不自動捲動，地圖可以好好看） */
+.nowbar { display: none; }
+@media (max-width: 960px) {
+  .nowbar { position: fixed; left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 900; display: flex; align-items: center; gap: 6px; padding: 6px; border-radius: 16px; background: var(--ink); color: #fff; box-shadow: 0 14px 34px -12px rgba(11,15,26,.55); }
+  .nowbar__txt { flex: 1; min-width: 0; display: grid; text-align: left; border: 0; background: none; color: inherit; font: 13px/1.35 var(--sans); padding: 4px 8px; cursor: pointer; }
+  .nowbar__txt b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nowbar__txt span { color: rgba(255,255,255,.75); font-variant-numeric: tabular-nums; }
+  .nowbar__btn { flex: none; width: 44px; height: 44px; border-radius: 12px; border: 0; background: var(--accent); color: #fff; font: 700 15px/1 var(--sans); cursor: pointer; }
+  .nowbar__btn--ghost { background: rgba(255,255,255,.12); }
 }
