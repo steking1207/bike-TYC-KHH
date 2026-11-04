@@ -229,6 +229,12 @@ code { font-family: var(--mono); font-size: max(13px, .9em); background: var(--p
 .map__canvas.leaflet-container { display: block; font: 13px/1.4 var(--sans); background: #EBEBE7; }
 .map__msg { margin: 0; }
 .map__play { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px 4px 12px; }
+.map__ones { display: flex; flex-wrap: wrap; gap: 6px; padding-right: 8px; margin-right: 2px; border-right: 1px solid var(--line); }
+.one { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px 0 6px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--ink); font: 600 14px/1 var(--sans); cursor: pointer; transition: border-color .15s, background .15s; }
+.one__ic { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--c); color: #fff; font-size: 13px; }
+.one:hover { border-color: var(--c); }
+.one[aria-pressed="true"] { border-color: var(--c); background: color-mix(in srgb, var(--c) 12%, var(--panel)); }
+@media (max-width: 640px) { .map__ones { border-right: 0; padding-right: 0; width: 100%; } }
 .map__play-note { font-size: 13px; color: var(--muted); }
 .map__keys { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 8px 6px; }
 .map__note { font-size: 13px; margin: 4px 8px 6px; }

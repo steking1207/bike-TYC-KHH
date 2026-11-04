@@ -25,6 +25,7 @@ const ll = (p) => (p && Number.isFinite(p.lat) && Number.isFinite(p.lon) ? [p.la
 export function mountMap(el, items, placesById, { player } = {}) {
   const api = { update() {} };
   el.innerHTML = `<div class="map">${player ? `<div class="map__play">
+      ${items.length > 1 ? `<div class="map__ones" role="group" aria-label="單獨播放某一趟">${items.map(({ ride }) => `<button type="button" class="one" data-mp-one="${ride.no}" style="--c:${rideColor(ride.no)}" title="只播放 ${ordinal(ride.no)}（${ride.date}）"><span class="one__ic" aria-hidden="true">▶</span>${ordinal(ride.no)}</button>`).join('')}</div>` : ''}
       <button type="button" class="btn btn--sm btn--go" data-mp-play>▶ 播放</button>
       <button type="button" class="btn btn--sm" data-mp-stop hidden>■ 停止</button>
       <span class="clock num" data-mp-clock></span>
@@ -39,12 +40,19 @@ export function mountMap(el, items, placesById, { player } = {}) {
   const mpPlay = el.querySelector('[data-mp-play]'); const mpStop = el.querySelector('[data-mp-stop]');
   mpPlay?.addEventListener('click', () => { if (ps.playing) player.togglePause(); else player.playPicked(); });
   mpStop?.addEventListener('click', () => player.stop());
+  el.querySelectorAll('[data-mp-one]').forEach((b) => b.addEventListener('click', () => player.playOne(Number(b.dataset.mpOne))));
   function setPlayState(st) {
     ps = st; if (!mpPlay) return;
     mpPlay.textContent = st.playing ? (st.paused ? '▶ 繼續' : '❚❚ 暫停') : st.label;
     mpPlay.disabled = !st.playing && !st.canPlay;
     mpPlay.classList.toggle('btn--go', !st.playing || st.paused);
     mpStop.hidden = !st.playing && !st.finished; mpStop.textContent = st.finished ? '✕ 清除' : '■ 停止';
+    el.querySelectorAll('[data-mp-one]').forEach((b) => {
+      const solo = st.nos && st.nos.length === 1 && st.nos[0] === Number(b.dataset.mpOne) && (st.playing || st.finished);
+      const run = solo && st.playing && !st.paused;
+      b.setAttribute('aria-pressed', String(solo)); b.querySelector('.one__ic').textContent = run ? '❚❚' : '▶';
+      b.title = `${run ? '暫停' : '只播放'} ${ordinal(Number(b.dataset.mpOne))}`;
+    });
     el.querySelector('[data-mp-clock]').textContent = st.playing || st.finished ? st.clock : '';
   }
 

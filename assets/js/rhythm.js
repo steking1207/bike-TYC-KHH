@@ -231,7 +231,7 @@ export function mountRhythm(el, items, { onTick, onState } = {}) {
   /* 目前的播放狀態，給地圖上的播放鈕同步 */
   function emit() {
     playBtn.textContent = playLabel(); playBtn.disabled = !picked.size;
-    if (onState) onState({ label: playLabel(), canPlay: picked.size > 0, playing: !!playing && !finished, paused, finished, clock: el.querySelector('[data-clock]').textContent });
+    if (onState) onState({ label: playLabel(), canPlay: picked.size > 0, nos: playing ? [...playing] : [], playing: !!playing && !finished, paused, finished, clock: el.querySelector('[data-clock]').textContent });
   }
   function togglePick(n) { if (picked.has(n)) picked.delete(n); else picked.add(n); syncPicks(); }
   function playPicked() { if (picked.size) start(items.map(({ ride }) => ride.no).filter((n) => picked.has(n))); }
@@ -273,5 +273,7 @@ export function mountRhythm(el, items, { onTick, onState } = {}) {
   pauseBtn.addEventListener('click', togglePause);
   el.querySelector('[data-speed]').addEventListener('change', (e) => { speed = Number(e.target.value); });
   draw(); syncPicks();
-  return { stop, togglePause, playPicked };
+  /* 只播放某一趟；正在播的就是這一趟時改成暫停／繼續 */
+  function playOne(n) { if (playing && playing.length === 1 && playing[0] === n && !finished) togglePause(); else start([n]); }
+  return { stop, togglePause, playPicked, playOne };
 }
