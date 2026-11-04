@@ -239,6 +239,7 @@ function renderEditor() {
       <label class="field"><span>氣溫 °C</span><input class="input" type="number" step="0.1" data-r="temp" value="${r.temp ?? ''}"></label>
       <label class="field"><span>回程高鐵班次</span><input class="input" type="time" data-r="train" value="${esc(r.train || '')}"></label>
       <label class="field wide"><span>Strava 連結</span><input class="input" type="url" data-l="strava" value="${esc(links.strava || '')}" placeholder="https://www.strava.com/activities/…"></label>
+      <label class="field wide"><span>部落格連結（選填）</span><input class="input" type="url" data-l="blog" value="${esc(links.blog || '')}" placeholder="https://steking.medium.com/…"></label>
       <label class="field wide"><span>裝備連結（LighterPack）</span><input class="input" type="url" data-l="gear" value="${esc(links.gear || '')}"></label>
       <label class="check"><input type="checkbox" data-r="hidden" ${r.hidden ? 'checked' : ''}> 隱藏（不在網站顯示）</label>
     </div>

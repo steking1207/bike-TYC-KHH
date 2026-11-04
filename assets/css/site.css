@@ -283,6 +283,8 @@ code { font-family: var(--mono); font-size: max(13px, .9em); background: var(--p
 .ride-row__tags { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 6px; margin-top: -4px; }
 .chip { display: inline-flex; align-items: center; gap: 5px; font: 500 13px/1.3 var(--sans); padding: 4px 10px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); }
 .chip--plain { background: var(--paper-2); color: var(--ink-2); }
+.chip--blog { background: var(--accent); color: #fff; font-weight: 700; cursor: pointer; }
+.chip--blog:hover, .chip--blog:focus-visible { background: var(--ink); color: var(--on-ink); outline: none; }
 .chip--best { background: var(--ink); color: var(--on-ink); }
 
 /* ───────── single ride ───────── */

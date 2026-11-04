@@ -247,7 +247,8 @@ function home() {
       <header class="sec__head rv"><span class="sec__no">03</span><h2>每一次</h2><p>橫條是那一天的 24 小時：深藍是夜裡、橘色是晨昏、金色是白天，中間的細線是休息。</p></header>
       <ol class="rides">${RIDES.map((it, i) => {
     const { ride, a } = it;
-    const tags = a.incidents.map((x) => `<span class="chip">${incOf(x).icon} ${x.who ? esc(x.who) : ''}${incOf(x).label}</span>`).join('');
+    const blog = ride.links && ride.links.blog ? `<span class="chip chip--blog" role="link" tabindex="0" data-blog="${esc(ride.links.blog)}" title="在新分頁開啟部落格遊記">📝 部落格遊記 ↗</span>` : '';
+    const tags = blog + a.incidents.map((x) => `<span class="chip">${incOf(x).icon} ${x.who ? esc(x.who) : ''}${incOf(x).label}</span>`).join('');
     return `<li><a class="ride-row rv" style="--c:${rideColor(ride.no)};--d:${(i * 0.05).toFixed(2)}s" href="#/ride/${ride.no}">
         <span class="ride-row__no">${pad2(ride.no)}<sup>${ordinal(ride.no).slice(-2).toUpperCase()}</sup></span>
         <span class="ride-row__when"><b>${dot(ride.date)}</b><span>${esc((ride.riders || []).join('、'))}</span><span class="wx">${esc(ride.weather || '')}${has(ride.temp) ? `・${esc(ride.temp)}°C` : ''}</span></span>
@@ -301,7 +302,7 @@ function rideView(no) {
       <a class="back" href="#/"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>全部紀錄</a>
       <div class="ride-hero__top">
         <h1 class="rv"><span class="ride-hero__no">第 <em>${ride.no}</em> 次</span><span class="ride-hero__date">${dot(ride.date)}<small>${weekday(ride.date)}・${ordinal(ride.no)} ride</small></span></h1>
-        <div class="ride-hero__links rv" style="--d:.1s">${links.strava ? `<a class="btn" href="${esc(links.strava)}" target="_blank" rel="noopener">Strava ${ICON.out}</a>` : ''}${links.gear ? `<a class="btn" href="${esc(links.gear)}" target="_blank" rel="noopener">裝備清單 ${ICON.out}</a>` : ''}</div>
+        <div class="ride-hero__links rv" style="--d:.1s">${links.blog ? `<a class="btn btn--go" href="${esc(links.blog)}" target="_blank" rel="noopener">部落格遊記 ${ICON.out}</a>` : ''}${links.strava ? `<a class="btn" href="${esc(links.strava)}" target="_blank" rel="noopener">Strava ${ICON.out}</a>` : ''}${links.gear ? `<a class="btn" href="${esc(links.gear)}" target="_blank" rel="noopener">裝備清單 ${ICON.out}</a>` : ''}</div>
       </div>
       <dl class="facts rv" style="--d:.14s">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
       <dl class="figs rv" style="--d:.2s">
@@ -417,3 +418,13 @@ load().then((d) => {
   $('[data-title]').textContent = d.title || '一日桃高';
   addEventListener('hashchange', route); route();
 }).catch((err) => { mountAeroBackdrop(); view.innerHTML = `<section class="page-head"><div><h1>載入失敗</h1><p>${esc(err.message)}</p><p class="muted">在本機預覽要先啟動伺服器，例如在資料夾執行 <code>python3 -m http.server</code>。</p></div></section>`; });
+
+// 總覽列整列是連結，部落格標籤用委派事件另開分頁（避免巢狀 <a>）
+const openBlog = (e) => {
+  const c = e.target.closest('[data-blog]'); if (!c) return;
+  if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+  e.preventDefault(); e.stopPropagation();
+  window.open(c.dataset.blog, '_blank', 'noopener');
+};
+view.addEventListener('click', openBlog);
+view.addEventListener('keydown', openBlog);
