@@ -131,7 +131,8 @@
       "weather": "苗栗以北雨、中部後晴",
       "temp": 17.8,
       "links": {
-        "strava": "https://www.strava.com/activities/4490206683"
+        "strava": "https://www.strava.com/activities/4490206683",
+        "blog": "https://steking.medium.com/2020-taoyuan-kaohsiung-bike-touring-acea90af3097"
       },
       "stops": [
         {
@@ -205,7 +206,8 @@
       "weather": "整日晴",
       "temp": 20,
       "links": {
-        "strava": "https://www.strava.com/activities/6369941043"
+        "strava": "https://www.strava.com/activities/6369941043",
+        "blog": "https://steking.medium.com/2021-taoyuan-kaohsiung-bike-touring-c2f5efa34c85"
       },
       "train": "21:30",
       "stops": [
@@ -285,7 +287,8 @@
       "temp": 16.6,
       "links": {
         "strava": "https://www.strava.com/activities/8320254054",
-        "gear": "https://lighterpack.com/r/qafdjz"
+        "gear": "https://lighterpack.com/r/qafdjz",
+        "blog": "https://steking.medium.com/2023-taoyuan-kaohsiung-bike-touring-0f7ebab06e2d"
       },
       "train": "21:30",
       "stops": [
@@ -642,5 +645,9 @@
         }
       ]
     }
-  ]
+  ],
+  "aero": {
+    "time": "auto",
+    "opacity": 0.35
+  }
 }
