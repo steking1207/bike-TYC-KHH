@@ -8,13 +8,14 @@ import { mountAero } from './aero.js';
 const KEY = 'tyckhh.aero.user'; // 只存訪客自己改過的項目，其餘用後台設定的預設值
 const SEEN = 'tyckhh.aero.hint';
 const STYLES = { sculpted: ['A', '塊面'], hatched: ['B', '版畫'], blueprint: ['C', '藍圖'], ribbon: ['D', '流線'] };
-const SCENES = { hybrid: '山城混合', city: '城市', mountain: '山稜' };
+const SCENES = { city: '城市', hybrid: '山城混合', mountain: '群山', coast: '海邊' };
 const TIMES = { auto: '自動日夜', day: '白天', dusk: '黃昏', night: '黑夜' };
 const IC = {
   style: '<path d="M4 20c4 0 5-3 5-5a3 3 0 1 0-6 0c0 2-1 3-2 3"/><path d="M9 15 20 4"/>',
   hybrid: '<path d="m2 20 6-9 4 5 3-3 7 7Z"/><path d="M16 9V5h3v6"/>',
   city: '<path d="M3 21V9h6v12M9 21V4h7v17M16 21v-9h5v9M2 21h20"/>',
   mountain: '<path d="m2 20 7-11 4 6 3-4 6 9Z"/>',
+  coast: '<path d="M2 17c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5M2 21c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5"/><path d="M12 3v10M12 3l5 8h-5"/>',
   auto: '<path d="M12 3a9 9 0 1 0 9 9"/><path d="M21 3v6h-6"/>',
   day: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   dusk: '<path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 9V2M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1M8 6l4-4 4 4"/>',
@@ -23,7 +24,7 @@ const IC = {
   bike: '<circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5 9 9h6l3.5 7.5M9 9 12 16.5h-1M15 9l-1.5-3H16"/>',
 };
 const svg = (k) => `<svg viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>`;
-export const AERO_DEFAULTS = { style: 'sculpted', scene: 'hybrid', time: 'day', speed: 30, opacity: 0.5, on: true };
+export const AERO_DEFAULTS = { style: 'sculpted', scene: 'city', time: 'day', speed: 30, opacity: 0.5, on: true };
 export const AERO_OPTIONS = { STYLES, SCENES, TIMES };
 /* 後台存的預設值：不合法的欄位丟掉 */
 function siteDefaults(d = {}) {
@@ -98,7 +99,7 @@ export function mountAeroBackdrop(site) {
     <div class="aero-panel" id="aero-panel" role="dialog" aria-label="背景動畫設定" hidden>
       <div class="aero-panel__head"><b>背景騎乘動畫</b><label class="aero-switch"><input type="checkbox" data-a="on" checked><span>顯示</span></label></div>
       <fieldset><legend>畫風</legend><div class="aero-opts aero-opts--4">${Object.entries(STYLES).map(([k, [l, n]]) => `<button type="button" data-set="style" data-k="${k}"><b>${l}</b>${n}</button>`).join('')}</div></fieldset>
-      <fieldset><legend>場景</legend><div class="aero-opts aero-opts--3">${Object.entries(SCENES).map(([k, n]) => `<button type="button" data-set="scene" data-k="${k}">${svg(k)}${n}</button>`).join('')}</div></fieldset>
+      <fieldset><legend>場景</legend><div class="aero-opts aero-opts--4">${Object.entries(SCENES).map(([k, n]) => `<button type="button" data-set="scene" data-k="${k}">${svg(k)}${n}</button>`).join('')}</div></fieldset>
       <fieldset><legend>日夜</legend><div class="aero-opts aero-opts--4">${Object.entries(TIMES).map(([k, n]) => `<button type="button" data-set="time" data-k="${k}">${svg(k)}${n.replace('自動日夜', '自動')}</button>`).join('')}</div>
         <p class="aero-panel__note">「自動」約 36 秒走完一天，網站顏色也會跟著變。</p></fieldset>
       <label class="aero-range"><span>線條濃淡</span><input type="range" min="0.15" max="1" step="0.05" data-r="opacity"><output></output></label>
