@@ -251,11 +251,11 @@ function home() {
     const tags = blog + a.incidents.map((x) => `<span class="chip">${incOf(x).icon} ${x.who ? esc(x.who) : ''}${incOf(x).label}</span>`).join('');
     return `<li><a class="ride-row rv" style="--c:${rideColor(ride.no)};--d:${(i * 0.05).toFixed(2)}s" href="#/ride/${ride.no}">
         <span class="ride-row__no">${pad2(ride.no)}<sup>${ordinal(ride.no).slice(-2).toUpperCase()}</sup></span>
-        <span class="ride-row__when"><b>${dot(ride.date)}</b><span>${esc((ride.riders || []).join('、'))}</span><span class="wx">${esc(ride.weather || '')}${has(ride.temp) ? `・${esc(ride.temp)}°C` : ''}</span></span>
+        <span class="ride-row__when"><b>${dot(ride.date)}${it === best ? '<span class="chip chip--best">最快</span>' : ''}</b><span>${esc((ride.riders || []).join('、'))}</span><span class="wx">${esc(ride.weather || '')}${has(ride.temp) ? `・${esc(ride.temp)}°C` : ''}</span></span>
         <span class="ride-row__day">${miniDay(it)}</span>
         <span class="ride-row__nums"><b>${fmtDur(a.total)}</b><span>${fmtKm(a.km)} km・休息 ${fmtDur(a.rest)}</span></span>
         <span class="ride-row__go" aria-hidden="true">${ICON.arrow}</span>
-        ${tags || it === best ? `<span class="ride-row__tags">${it === best ? '<span class="chip chip--best">最快</span>' : ''}${tags}</span>` : ''}
+        ${tags ? `<span class="ride-row__tags">${tags}</span>` : ''}
       </a></li>`;
   }).join('')}</ol>
     </section>`;
